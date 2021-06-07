@@ -4,7 +4,7 @@ from diffsync.enum import DiffSyncFlags
 
 from nautobot.extras.jobs import StringVar
 
-from nautobot_ssot.sync.base import DataSyncWorker
+from nautobot_ssot.sync.worker import DataSyncWorker
 
 from .diffsync.adapter_nautobot import NautobotDiffSync
 from .diffsync.adapter_servicenow import ServiceNowDiffSync

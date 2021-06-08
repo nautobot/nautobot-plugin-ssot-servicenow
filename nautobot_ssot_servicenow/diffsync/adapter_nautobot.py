@@ -19,6 +19,11 @@ class NautobotDiffSync(DiffSync):
         "location",
     ]
 
+    def __init__(self, *args, sync_worker=None, sync=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.sync_worker = sync_worker
+        self.sync = sync
+
     def load_regions(self, parent_location=None):
         """Recursively add Nautobot Region objects as DiffSync Location models."""
         parent_pk = parent_location.pk if parent_location else None

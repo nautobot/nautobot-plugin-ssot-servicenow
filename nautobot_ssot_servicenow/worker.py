@@ -46,8 +46,8 @@ class ServiceNowExportDataSyncWorker(DataSyncWorker):
             app_prefix=self.data["snow_app_prefix"],
             worker=self,
         )
-        self.servicenow_diffsync = ServiceNowDiffSync(client=self.snc, worker=self)
-        self.nautobot_diffsync = NautobotDiffSync()
+        self.servicenow_diffsync = ServiceNowDiffSync(client=self.snc, sync_worker=self, sync=self.sync)
+        self.nautobot_diffsync = NautobotDiffSync(sync_worker=self, sync=self.sync)
 
     def execute(self):
         """Sync a slew of Nautobot data into ServiceNow."""

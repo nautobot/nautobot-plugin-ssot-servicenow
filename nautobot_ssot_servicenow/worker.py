@@ -2,6 +2,7 @@ import logging
 
 from diffsync.enum import DiffSyncFlags
 
+from nautobot.dcim.models import Device, Interface, Region, Site
 from nautobot.extras.jobs import StringVar
 
 from nautobot_ssot.sync.worker import DataSyncWorker
@@ -64,3 +65,26 @@ class ServiceNowExportDataSyncWorker(DataSyncWorker):
                 DiffSyncFlags.LOG_UNCHANGED_RECORDS |
                 DiffSyncFlags.SKIP_UNMATCHED_DST,
             )
+
+    def lookup_object(self, model_name, unique_id):
+        if model_name == "location":
+            try:
+                return (Region.objects.get(name=unique_id), None)
+            except Region.DoesNotExist:
+                pass
+            try:
+                return (Site.objects.get(name=unique_id), None)
+            except Site.DoesNotExist:
+                pass
+        elif model_name == "device":
+            try:
+                return Device.objects.get(name=unique_id)
+            except Device.DoesNotExist:
+                pass
+        elif model_name == "interface":
+            device_name, interface_name = unique_id.split("__")
+            try:
+                return Interface.objects.get(device__name=device_name, name=interface_name)
+            except Interface.DoesNotExist:
+                pass
+        return (None, None)

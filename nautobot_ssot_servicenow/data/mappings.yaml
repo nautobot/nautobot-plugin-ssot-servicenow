@@ -28,6 +28,7 @@
         key: "model_id"
         table: "cmdb_model"
         column: "name"
+{% if app_prefix %}
     - field: "platform"
       reference:
         key: "{{ app_prefix }}platform"
@@ -38,6 +39,7 @@
         key: "{{ app_prefix }}device_role"
         table: "{{ app_prefix }}device_role"
         column: "name"
+{% endif %}
     - field: "vendor"
       reference:
         key: "manufacturer"

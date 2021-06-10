@@ -42,7 +42,7 @@ class NautobotDiffSync(DiffSync):
             try:
                 location = self.get(self.location, site_record.name)
             except ObjectNotFound:
-                location = self.location(diffsync=self, name=site_record.name)
+                location = self.location(diffsync=self, name=site_record.name, pk=site_record.pk)
                 self.add(location)
             if site_record.region:
                 if location.name != site_record.region.name:
@@ -71,7 +71,7 @@ class NautobotDiffSync(DiffSync):
         self.load_sites()
 
         for location in self.get_all(self.location):
-            for device_record in Device.objects.filter(site=location.pk):
+            for device_record in Device.objects.filter(site__pk=location.pk):
                 device = self.device(
                     diffsync=self,
                     name=device_record.name,

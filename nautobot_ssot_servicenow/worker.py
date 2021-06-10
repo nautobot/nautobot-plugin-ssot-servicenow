@@ -78,13 +78,13 @@ class ServiceNowExportDataSyncWorker(DataSyncWorker):
                 pass
         elif model_name == "device":
             try:
-                return Device.objects.get(name=unique_id)
+                return (Device.objects.get(name=unique_id), None)
             except Device.DoesNotExist:
                 pass
         elif model_name == "interface":
             device_name, interface_name = unique_id.split("__")
             try:
-                return Interface.objects.get(device__name=device_name, name=interface_name)
+                return (Interface.objects.get(device__name=device_name, name=interface_name), None)
             except Interface.DoesNotExist:
                 pass
         return (None, None)

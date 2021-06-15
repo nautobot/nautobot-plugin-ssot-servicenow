@@ -1,19 +1,16 @@
-import logging
-
 from diffsync.enum import DiffSyncFlags
 
 from nautobot.dcim.models import Device, Interface, Region, Site
-from nautobot.extras.jobs import StringVar
+from nautobot.extras.jobs import Job, StringVar
 
-from nautobot_ssot.sync.worker import DataSyncWorker
+from nautobot_ssot.jobs.base import DataTarget
 
 from .diffsync.adapter_nautobot import NautobotDiffSync
 from .diffsync.adapter_servicenow import ServiceNowDiffSync
 from .servicenow import ServiceNowClient
 
-
-class ServiceNowExportDataSyncWorker(DataSyncWorker):
-    """Worker class to handle data sync to ServiceNow."""
+class ServiceNowDataTarget(DataTarget, Job):
+    """Job syncing data from Nautobot to ServiceNow."""
 
     snow_instance = StringVar(
         label="ServiceNow instance",
@@ -35,36 +32,39 @@ class ServiceNowExportDataSyncWorker(DataSyncWorker):
 
     class Meta:
         name = "ServiceNow"
-        slug = "service-now"
+        data_target = "ServiceNow"
         description = "Synchronize data from Nautobot into ServiceNow."
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def sync_data(self):
+        """Sync a slew of Nautobot data into ServiceNow."""
         self.snc = ServiceNowClient(
-            instance=self.data["snow_instance"],
-            username=self.data["snow_username"],
-            password=self.data["snow_password"],
-            app_prefix=self.data["snow_app_prefix"],
+            instance=self.kwargs["snow_instance"],
+            username=self.kwargs["snow_username"],
+            password=self.kwargs["snow_password"],
+            app_prefix=self.kwargs["snow_app_prefix"],
             worker=self,
         )
-        self.servicenow_diffsync = ServiceNowDiffSync(client=self.snc, sync_worker=self, sync=self.sync)
-        self.nautobot_diffsync = NautobotDiffSync(sync_worker=self, sync=self.sync)
-
-    def execute(self):
-        """Sync a slew of Nautobot data into ServiceNow."""
+        self.log_info(message="Loading current data from ServiceNow...")
+        self.servicenow_diffsync = ServiceNowDiffSync(client=self.snc, job=self, sync=self.sync)
         self.servicenow_diffsync.load()
+
+        self.log_info(message="Loading current data from Nautobot...")
+        self.nautobot_diffsync = NautobotDiffSync(job=self, sync=self.sync)
         self.nautobot_diffsync.load()
 
+        self.log_info(message="Calculating diffs...")
         diff = self.servicenow_diffsync.diff_from(self.nautobot_diffsync)
         self.sync.diff = diff.dict()
         self.sync.save()
-        if not self.dry_run:
+        if not self.kwargs["dry_run"]:
+            self.log_info(message="Syncing from Nautobot to ServiceNow...")
             self.servicenow_diffsync.sync_from(
                 self.nautobot_diffsync,
                 flags=DiffSyncFlags.CONTINUE_ON_FAILURE |
                 DiffSyncFlags.LOG_UNCHANGED_RECORDS |
                 DiffSyncFlags.SKIP_UNMATCHED_DST,
             )
+            self.log_info(message="Sync complete")
 
     def lookup_object(self, model_name, unique_id):
         if model_name == "location":
@@ -88,3 +88,6 @@ class ServiceNowExportDataSyncWorker(DataSyncWorker):
             except Interface.DoesNotExist:
                 pass
         return (None, None)
+
+
+jobs = [ServiceNowDataTarget]

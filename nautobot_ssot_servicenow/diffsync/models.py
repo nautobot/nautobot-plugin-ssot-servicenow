@@ -25,7 +25,7 @@ class ServiceNowCRUDMixin:
                     if value is not None:
                         target = self.diffsync.client.get_by_query(tablename, {mapping["reference"]["column"]: value})
                         if target is None:
-                            self.diffsync.sync_worker.job_log(f"Unable to find reference target in {tablename}")
+                            self.diffsync.job.log_warning(message=f"Unable to find reference target in {tablename}")
                 else:
                     raise NotImplementedError
 
@@ -34,7 +34,7 @@ class ServiceNowCRUDMixin:
             else:
                 raise NotImplementedError
 
-        self.diffsync.sync_worker.job_log(f"Mapped data {data} to record {record}")
+        self.diffsync.job.log_debug(f"Mapped data {data} to record {record}")
         return record
 
     @classmethod
@@ -73,8 +73,8 @@ class ServiceNowCRUDMixin:
         try:
             record = sn_resource.get(query=query).one()
         except pysnow.exceptions.MultipleResults:
-            self.diffsync.sync_worker.job_log(
-                f"Unsure which record to update, as query {query} matched more than one item in table {entry['table']}"
+            self.diffsync.job.log_failure(
+                message=f"Unsure which record to update, as query {query} matched more than one item in table {entry['table']}"
             )
             return None
 

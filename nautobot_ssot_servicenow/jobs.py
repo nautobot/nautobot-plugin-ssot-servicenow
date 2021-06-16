@@ -1,9 +1,12 @@
+from django.templatetags.static import static
+from django.urls import reverse
+
 from diffsync.enum import DiffSyncFlags
 
 from nautobot.dcim.models import Device, Interface, Region, Site
 from nautobot.extras.jobs import Job, StringVar
 
-from nautobot_ssot.jobs.base import DataTarget
+from nautobot_ssot.jobs.base import DataMapping, DataTarget
 
 from .diffsync.adapter_nautobot import NautobotDiffSync
 from .diffsync.adapter_servicenow import ServiceNowDiffSync
@@ -33,7 +36,17 @@ class ServiceNowDataTarget(DataTarget, Job):
     class Meta:
         name = "ServiceNow"
         data_target = "ServiceNow"
+        data_target_icon = static("nautobot_ssot_servicenow/ServiceNow_logo.svg")
         description = "Synchronize data from Nautobot into ServiceNow."
+
+    @classmethod
+    def data_mappings(cls):
+        return (
+            DataMapping("Region", reverse("dcim:region_list"), "Location", None),
+            DataMapping("Site", reverse("dcim:site_list"), "Location", None),
+            DataMapping("Device", reverse("dcim:device_list"), "IP Switch", None),
+            DataMapping("Interface", reverse("dcim:interface_list"), "Interface", None),
+        )
 
     def sync_data(self):
         """Sync a slew of Nautobot data into ServiceNow."""

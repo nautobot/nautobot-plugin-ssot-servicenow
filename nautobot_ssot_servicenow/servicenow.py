@@ -23,12 +23,11 @@ def python_value_to_string(value):
 class ServiceNowClient(Client):
     """Extend the pysnow Client with additional use-case-specific functionality."""
 
-    def __init__(self, instance="", username="", password="", app_prefix="", worker=None):
+    def __init__(self, instance="", username="", password="", worker=None):
         """Create a ServiceNowClient with the appropriate environment parameters."""
         super().__init__(instance=instance, user=username, password=password)
 
         self.worker = worker
-        self.app_prefix = app_prefix
 
         # When getting records from ServiceNow, for reference fields, only return the sys_id value of the reference,
         # rather than returning a dict of {"link": "https://<instance>.servicenow.com/...", "value": <sys_id>}

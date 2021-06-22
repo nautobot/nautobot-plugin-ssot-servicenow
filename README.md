@@ -29,7 +29,6 @@ PLUGINS_CONFIG = {
         "instance": "dev12345",
         "username": os.getenv("SERVICENOW_USERNAME"),
         "password": os.getenv("SERVICENOW_PASSWORD"),
-        "app_prefix": "x_test_12345_",
     }
 }
 ```
@@ -39,7 +38,6 @@ The plugin behavior can be controlled with the following list of settings:
 - `instance`: The ServiceNow instance to point to (as in `<instance>.servicenow.com`)
 - `username`: Username to access this instance
 - `password`: Password to access this instance
-- `app_prefix`: Custom app prefix used for custom tables / custom fields that may be included in the data sync.
 
 ## Usage
 

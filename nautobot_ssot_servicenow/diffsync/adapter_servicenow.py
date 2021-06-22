@@ -32,13 +32,13 @@ class ServiceNowDiffSync(DiffSync):
 
     def load(self):
         """Load data via pysnow."""
-        self.mapping_data = self.load_yaml_datafile("mappings.yaml", {"app_prefix": self.client.app_prefix})
+        self.mapping_data = self.load_yaml_datafile("mappings.yaml")
 
         for entry in self.mapping_data:
             self.load_table(**entry)
 
     @classmethod
-    def load_yaml_datafile(cls, filename, config):
+    def load_yaml_datafile(cls, filename, config=None):
         """Get the contents of the given YAML data file.
 
         Args:
@@ -48,6 +48,8 @@ class ServiceNowDiffSync(DiffSync):
         file_path = os.path.join(cls.DATA_DIR, filename)
         if not os.path.isfile(file_path):
             raise RuntimeError(f"No data file found at {file_path}")
+        if not config:
+            config = {}
         env = Environment(loader=FileSystemLoader(cls.DATA_DIR), autoescape=True)
         template = env.get_template(filename)
         populated = template.render(config)

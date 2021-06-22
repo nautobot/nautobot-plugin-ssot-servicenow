@@ -48,7 +48,6 @@ class ServiceNowDataTarget(DataTarget, Job):
             "ServiceNow instance": configs.get("instance"),
             "Username": configs.get("username"),
             # Password is intentionally omitted!
-            "Application prefix": configs.get("app_prefix"),
         }
 
     def sync_data(self):
@@ -58,7 +57,6 @@ class ServiceNowDataTarget(DataTarget, Job):
             instance=configs.get("instance"),
             username=configs.get("username"),
             password=configs.get("password"),
-            app_prefix=configs.get("app_prefix"),
             worker=self,
         )
         self.log_info(message="Loading current data from ServiceNow...")

@@ -24,16 +24,22 @@ Once installed, the plugin needs to be enabled in your `nautobot_configuration.p
 # In your configuration.py
 PLUGINS = ["nautobot_ssot_servicenow"]
 
-# PLUGINS_CONFIG = {
-#   "nautobot_ssot_servicenow": {
-#     ADD YOUR SETTINGS HERE
-#   }
-# }
+PLUGINS_CONFIG = {
+    "nautobot_ssot_servicenow": {
+        "instance": "dev12345",
+        "username": os.getenv("SERVICENOW_USERNAME"),
+        "password": os.getenv("SERVICENOW_PASSWORD"),
+        "app_prefix": "x_test_12345_",
+    }
+}
 ```
 
-The plugin behavior can be controlled with the following list of settings
+The plugin behavior can be controlled with the following list of settings:
 
-- TODO
+- `instance`: The ServiceNow instance to point to (as in `<instance>.servicenow.com`)
+- `username`: Username to access this instance
+- `password`: Password to access this instance
+- `app_prefix`: Custom app prefix used for custom tables / custom fields that may be included in the data sync.
 
 ## Usage
 

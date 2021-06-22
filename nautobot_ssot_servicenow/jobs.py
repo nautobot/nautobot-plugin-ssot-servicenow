@@ -1,10 +1,11 @@
+from django.conf import settings
 from django.templatetags.static import static
 from django.urls import reverse
 
 from diffsync.enum import DiffSyncFlags
 
 from nautobot.dcim.models import Device, Interface, Region, Site
-from nautobot.extras.jobs import Job, StringVar
+from nautobot.extras.jobs import Job, BooleanVar
 
 from nautobot_ssot.jobs.base import DataMapping, DataTarget
 
@@ -15,22 +16,14 @@ from .servicenow import ServiceNowClient
 class ServiceNowDataTarget(DataTarget, Job):
     """Job syncing data from Nautobot to ServiceNow."""
 
-    snow_instance = StringVar(
-        label="ServiceNow instance",
-        description='&lt;instance&gt;.servicenow.com, such as "dev12345"'
+    log_unchanged = BooleanVar(
+        description="Create log entries even for unchanged objects",
+        default=False,
     )
-    snow_username = StringVar(
-        label="ServiceNow username",
-    )
-    snow_password = StringVar(
-        label="ServiceNow password",
-        # TODO widget=...
-    )
-    snow_app_prefix = StringVar(
-        label="ServiceNow app prefix",
-        description="(if any)",
-        default="",
-        required=False,
+
+    delete_records = BooleanVar(
+        description="Delete records from ServiceNow if not present in Nautobot",
+        default=False,
     )
 
     class Meta:
@@ -48,13 +41,24 @@ class ServiceNowDataTarget(DataTarget, Job):
             DataMapping("Interface", reverse("dcim:interface_list"), "Interface", None),
         )
 
+    @classmethod
+    def config_information(cls):
+        configs = settings.PLUGINS_CONFIG.get("nautobot_ssot_servicenow", {})
+        return {
+            "ServiceNow instance": configs.get("instance"),
+            "Username": configs.get("username"),
+            # Password is intentionally omitted!
+            "Application prefix": configs.get("app_prefix"),
+        }
+
     def sync_data(self):
         """Sync a slew of Nautobot data into ServiceNow."""
+        configs = settings.PLUGINS_CONFIG.get("nautobot_ssot_servicenow", {})
         self.snc = ServiceNowClient(
-            instance=self.kwargs["snow_instance"],
-            username=self.kwargs["snow_username"],
-            password=self.kwargs["snow_password"],
-            app_prefix=self.kwargs["snow_app_prefix"],
+            instance=configs.get("instance"),
+            username=configs.get("username"),
+            password=configs.get("password"),
+            app_prefix=configs.get("app_prefix"),
             worker=self,
         )
         self.log_info(message="Loading current data from ServiceNow...")
@@ -65,18 +69,20 @@ class ServiceNowDataTarget(DataTarget, Job):
         self.nautobot_diffsync = NautobotDiffSync(job=self, sync=self.sync)
         self.nautobot_diffsync.load()
 
+        diffsync_flags = DiffSyncFlags.CONTINUE_ON_FAILURE
+        if self.kwargs["log_unchanged"]:
+            diffsync_flags |= DiffSyncFlags.LOG_UNCHANGED_RECORDS
+        if not self.kwargs["delete_records"]:
+            diffsync_flags |= DiffSyncFlags.SKIP_UNMATCHED_DST
+
         self.log_info(message="Calculating diffs...")
-        diff = self.servicenow_diffsync.diff_from(self.nautobot_diffsync)
+        diff = self.servicenow_diffsync.diff_from(self.nautobot_diffsync, flags=diffsync_flags)
         self.sync.diff = diff.dict()
         self.sync.save()
+
         if not self.kwargs["dry_run"]:
             self.log_info(message="Syncing from Nautobot to ServiceNow...")
-            self.servicenow_diffsync.sync_from(
-                self.nautobot_diffsync,
-                flags=DiffSyncFlags.CONTINUE_ON_FAILURE |
-                DiffSyncFlags.LOG_UNCHANGED_RECORDS |
-                DiffSyncFlags.SKIP_UNMATCHED_DST,
-            )
+            self.servicenow_diffsync.sync_from(self.nautobot_diffsync, flags=diffsync_flags)
             self.log_info(message="Sync complete")
 
     def lookup_object(self, model_name, unique_id):

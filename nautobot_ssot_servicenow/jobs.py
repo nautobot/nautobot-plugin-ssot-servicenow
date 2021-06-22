@@ -13,6 +13,7 @@ from .diffsync.adapter_nautobot import NautobotDiffSync
 from .diffsync.adapter_servicenow import ServiceNowDiffSync
 from .servicenow import ServiceNowClient
 
+
 class ServiceNowDataTarget(DataTarget, Job):
     """Job syncing data from Nautobot to ServiceNow."""
 

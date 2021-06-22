@@ -86,6 +86,7 @@ class ServiceNowCRUDMixin:
 
     # TODO delete() method
 
+
 class Location(ServiceNowCRUDMixin, DiffSyncModel):
     """ServiceNow Location model."""
 
@@ -115,9 +116,7 @@ class Device(ServiceNowCRUDMixin, DiffSyncModel):
     # For now we do not store more of the device fields in ServiceNow:
     # platform, model, role, vendor
     # ...as we would need to sync these data models to ServiceNow as well, and we don't do that yet.
-    _attributes = (
-        "location_name",
-    )
+    _attributes = ("location_name",)
     _children = {
         "interface": "interfaces",
     }

@@ -20,6 +20,7 @@ class NautobotDiffSync(DiffSync):
     ]
 
     def __init__(self, *args, job=None, sync=None, **kwargs):
+        """Initialize the NautobotDiffSync."""
         super().__init__(*args, **kwargs)
         self.job = job
         self.sync = sync

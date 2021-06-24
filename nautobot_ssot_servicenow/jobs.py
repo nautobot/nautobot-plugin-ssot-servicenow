@@ -1,3 +1,4 @@
+"""ServiceNow Data Target Job."""
 from django.conf import settings
 from django.templatetags.static import static
 from django.urls import reverse
@@ -28,6 +29,7 @@ class ServiceNowDataTarget(DataTarget, Job):
     )
 
     class Meta:
+        """Metadata about this Job."""
         name = "ServiceNow"
         data_target = "ServiceNow"
         data_target_icon = static("nautobot_ssot_servicenow/ServiceNow_logo.svg")
@@ -35,6 +37,7 @@ class ServiceNowDataTarget(DataTarget, Job):
 
     @classmethod
     def data_mappings(cls):
+        """List describing the data mappings involved in this DataTarget."""
         return (
             DataMapping("Region", reverse("dcim:region_list"), "Location", None),
             DataMapping("Site", reverse("dcim:site_list"), "Location", None),
@@ -44,6 +47,7 @@ class ServiceNowDataTarget(DataTarget, Job):
 
     @classmethod
     def config_information(cls):
+        """Dictionary describing the configuration of this DataTarget."""
         configs = settings.PLUGINS_CONFIG.get("nautobot_ssot_servicenow", {})
         return {
             "ServiceNow instance": configs.get("instance"),
@@ -85,6 +89,7 @@ class ServiceNowDataTarget(DataTarget, Job):
             self.log_info(message="Sync complete")
 
     def lookup_object(self, model_name, unique_id):
+        """Look up a Nautobot object based on the DiffSync model name and unique ID."""
         if model_name == "location":
             try:
                 return (Region.objects.get(name=unique_id), None)

@@ -1,16 +1,16 @@
-# Nautobot Single Source of Truth -- ServiceNow
+# Nautobot Single Source of Truth -- ServiceNow Data Target
 
-A plugin for [Nautobot](https://github.com/nautobot/nautobot).
+A plugin for [Nautobot](https://github.com/nautobot/nautobot), building atop the [nautobot-ssot](https://github.com/nautobot/nautobot-plugin-ssot/) plugin.
 
 ## Installation
 
-The plugin is available as a Python package in pypi and can be installed with pip
+The plugin is available as a Python package in PyPI and can be installed with `pip`:
 
 ```shell
 pip install nautobot-ssot-servicenow
 ```
 
-> The plugin is compatible with Nautobot 1.0.0 and higher
+> The plugin is compatible with Nautobot 1.0.3 and higher
 
 To ensure nautobot-ssot-servicenow is automatically re-installed during future upgrades, create a file named `local_requirements.txt` (if not already existing) in the Nautobot root directory (alongside `requirements.txt`) and list the `nautobot-ssot-servicenow` package:
 

@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class ServiceNowClient(Client):
     """Extend the pysnow Client with additional use-case-specific functionality."""
 
-    def __init__(self, instance="", username="", password="", worker=None):
+    def __init__(self, instance=None, username=None, password=None, worker=None):
         """Create a ServiceNowClient with the appropriate environment parameters."""
         super().__init__(instance=instance, user=username, password=password)
 

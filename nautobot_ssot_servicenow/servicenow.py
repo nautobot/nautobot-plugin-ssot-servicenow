@@ -1,6 +1,5 @@
 """Interactions with ServiceNow APIs."""
 import logging
-import os
 
 from pysnow import Client
 import requests

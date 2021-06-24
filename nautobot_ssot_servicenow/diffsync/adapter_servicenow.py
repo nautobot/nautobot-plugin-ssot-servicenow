@@ -106,9 +106,6 @@ class ServiceNowDiffSync(DiffSync):
             else:
                 parent_model = self.get(kwargs["parent"]["modelname"], parent_uid)
                 parent_model.add_child(model)
-                self.job.log_debug(
-                    f"Recorded {modelname} {model.get_unique_id()} as a child of {parent_model.get_type()} {parent_model.get_unique_id()}"
-                )
 
     def map_record_to_attrs(self, record, mappings):  # TODO pylint: disable=too-many-branches
         """Helper method to load_table()."""

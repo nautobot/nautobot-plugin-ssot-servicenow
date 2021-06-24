@@ -58,19 +58,19 @@ class ServiceNowDataTarget(DataTarget, Job):
     def sync_data(self):
         """Sync a slew of Nautobot data into ServiceNow."""
         configs = settings.PLUGINS_CONFIG.get("nautobot_ssot_servicenow", {})
-        self.snc = ServiceNowClient(
+        snc = ServiceNowClient(
             instance=configs.get("instance"),
             username=configs.get("username"),
             password=configs.get("password"),
             worker=self,
         )
         self.log_info(message="Loading current data from ServiceNow...")
-        self.servicenow_diffsync = ServiceNowDiffSync(client=self.snc, job=self, sync=self.sync)
-        self.servicenow_diffsync.load()
+        servicenow_diffsync = ServiceNowDiffSync(client=snc, job=self, sync=self.sync)
+        servicenow_diffsync.load()
 
         self.log_info(message="Loading current data from Nautobot...")
-        self.nautobot_diffsync = NautobotDiffSync(job=self, sync=self.sync)
-        self.nautobot_diffsync.load()
+        nautobot_diffsync = NautobotDiffSync(job=self, sync=self.sync)
+        nautobot_diffsync.load()
 
         diffsync_flags = DiffSyncFlags.CONTINUE_ON_FAILURE
         if self.kwargs["log_unchanged"]:
@@ -79,13 +79,13 @@ class ServiceNowDataTarget(DataTarget, Job):
             diffsync_flags |= DiffSyncFlags.SKIP_UNMATCHED_DST
 
         self.log_info(message="Calculating diffs...")
-        diff = self.servicenow_diffsync.diff_from(self.nautobot_diffsync, flags=diffsync_flags)
+        diff = servicenow_diffsync.diff_from(nautobot_diffsync, flags=diffsync_flags)
         self.sync.diff = diff.dict()
         self.sync.save()
 
         if not self.kwargs["dry_run"]:
             self.log_info(message="Syncing from Nautobot to ServiceNow...")
-            self.servicenow_diffsync.sync_from(self.nautobot_diffsync, flags=diffsync_flags)
+            servicenow_diffsync.sync_from(nautobot_diffsync, flags=diffsync_flags)
             self.log_info(message="Sync complete")
 
     def lookup_object(self, model_name, unique_id):

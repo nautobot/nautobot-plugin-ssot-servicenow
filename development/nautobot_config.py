@@ -244,16 +244,17 @@ NAPALM_ARGS = {}
 PAGINATE_COUNT = int(os.environ.get("PAGINATE_COUNT", 50))
 
 # Enable installed plugins. Add the name of each plugin to the list.
-PLUGINS = ["nautobot_ssot_servicenow"]
+PLUGINS = ["nautobot_ssot", "nautobot_ssot_servicenow"]
 
 # Plugins configuration settings. These settings are used by various plugins that the user may have installed.
 # Each key in the dictionary is the name of an installed plugin and its value is a dictionary of settings.
-# PLUGINS_CONFIG = {
-#     'my_plugin': {
-#         'foo': 'bar',
-#         'buzz': 'bazz'
-#     }
-# }
+PLUGINS_CONFIG = {
+    "nautobot_ssot_servicenow": {
+        "instance": "dev12345",
+        "username": os.getenv("SERVICENOW_USERNAME", ""),
+        "password": os.getenv("SERVICENOW_PASSWORD", ""),
+    }
+}
 
 # When determining the primary IP address for a device, IPv6 is preferred over IPv4 by default. Set this to True to
 # prefer IPv4 instead.

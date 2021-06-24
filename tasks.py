@@ -81,7 +81,10 @@ def docker_compose(context, command, **kwargs):
         command (str): Command string to append to the "docker-compose ..." command, such as "build", "up", etc.
         **kwargs: Passed through to the context.run() call.
     """
-    build_env = {"NAUTOBOT_VER": context.nautobot_ssot_servicenow.nautobot_ver, "PYTHON_VER": context.nautobot_ssot_servicenow.python_ver}
+    build_env = {
+        "NAUTOBOT_VER": context.nautobot_ssot_servicenow.nautobot_ver,
+        "PYTHON_VER": context.nautobot_ssot_servicenow.python_ver,
+    }
     compose_command = f'docker-compose --project-name {context.nautobot_ssot_servicenow.project_name} --project-directory "{context.nautobot_ssot_servicenow.compose_dir}"'
     for compose_file in context.nautobot_ssot_servicenow.compose_files:
         compose_file_path = os.path.join(context.nautobot_ssot_servicenow.compose_dir, compose_file)

@@ -9,6 +9,9 @@ import pysnow
 class ServiceNowCRUDMixin:
     """Mixin class for all ServiceNow models, to support CRUD operations based on mappings.yaml."""
 
+    _sys_id_cache = {}
+    """Dict of table -> column_name -> value -> sys_id."""
+
     def map_data_to_sn_record(self, data, mapping_entry, existing_record=None):
         """Map create/update data from DiffSync to a corresponding ServiceNow data record."""
         record = existing_record or {}
@@ -20,16 +23,23 @@ class ServiceNowCRUDMixin:
                 record[mapping["column"]] = value
             elif "reference" in mapping:
                 tablename = mapping["reference"]["table"]
-                target = None
+                sys_id = None
                 if "column" in mapping["reference"]:
+                    column_name = mapping["reference"]["column"]
                     if value is not None:
-                        target = self.diffsync.client.get_by_query(tablename, {mapping["reference"]["column"]: value})
-                        if target is None:
-                            self.diffsync.job.log_warning(message=f"Unable to find reference target in {tablename}")
+                        # Look in the cache first
+                        sys_id = self._sys_id_cache.get(tablename, {}).get(column_name, {}).get(value, None)
+                        if not sys_id:
+                            target = self.diffsync.client.get_by_query(tablename, {mapping["reference"]["column"]: value})
+                            if target is None:
+                                self.diffsync.job.log_warning(message=f"Unable to find reference target in {tablename}")
+                            else:
+                                sys_id = target["sys_id"]
+                                self._sys_id_cache.setdefault(tablename, {}).setdefault(column_name, {})[value] = sys_id
+
                 else:
                     raise NotImplementedError
 
-                sys_id = target["sys_id"] if target else None
                 record[mapping["reference"]["key"]] = sys_id
             else:
                 raise NotImplementedError

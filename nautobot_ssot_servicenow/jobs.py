@@ -92,25 +92,25 @@ class ServiceNowDataTarget(DataTarget, Job):
         """Look up a Nautobot object based on the DiffSync model name and unique ID."""
         if model_name == "location":
             try:
-                return (Region.objects.get(name=unique_id), None)
+                return Region.objects.get(name=unique_id)
             except Region.DoesNotExist:
                 pass
             try:
-                return (Site.objects.get(name=unique_id), None)
+                return Site.objects.get(name=unique_id)
             except Site.DoesNotExist:
                 pass
         elif model_name == "device":
             try:
-                return (Device.objects.get(name=unique_id), None)
+                return Device.objects.get(name=unique_id)
             except Device.DoesNotExist:
                 pass
         elif model_name == "interface":
             device_name, interface_name = unique_id.split("__")
             try:
-                return (Interface.objects.get(device__name=device_name, name=interface_name), None)
+                return Interface.objects.get(device__name=device_name, name=interface_name)
             except Interface.DoesNotExist:
                 pass
-        return (None, None)
+        return None
 
 
 jobs = [ServiceNowDataTarget]

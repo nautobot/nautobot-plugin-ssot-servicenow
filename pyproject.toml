@@ -24,8 +24,6 @@ Jinja2 = "<3"
 pysnow = "^0.7.17"
 PyYAML = "^5.4.1"
 diffsync = "^1.3.0"
-nautobot = "^1.0.3"
-nautobot-ssot = {path = "packages/nautobot_ssot-0.1.0-py3-none-any.whl"}
 
 [tool.poetry.dev-dependencies]
 invoke = "*"

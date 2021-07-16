@@ -93,7 +93,7 @@ class ServiceNowDiffSync(DiffSync):
 
         try:
             self.add(model)
-            self.job.log_debug(f"Loaded {modelname} {model.get_unique_id()}")
+            # self.job.log_debug(f"Loaded {modelname} {model.get_unique_id()}")
         except ObjectAlreadyExists:
             # TODO: the baseline data in ServiceNow has a number of duplicate Location entries. For now, continue
             self.job.log_debug(f"Duplicate object encountered for {modelname} {model.get_unique_id()}")

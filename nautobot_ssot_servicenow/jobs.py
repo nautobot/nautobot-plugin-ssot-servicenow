@@ -30,6 +30,7 @@ class ServiceNowDataTarget(DataTarget, Job):
 
     class Meta:
         """Metadata about this Job."""
+
         name = "ServiceNow"
         data_target = "ServiceNow"
         data_target_icon = static("nautobot_ssot_servicenow/ServiceNow_logo.svg")

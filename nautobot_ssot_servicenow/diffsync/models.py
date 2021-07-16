@@ -30,7 +30,9 @@ class ServiceNowCRUDMixin:
                         # Look in the cache first
                         sys_id = self._sys_id_cache.get(tablename, {}).get(column_name, {}).get(value, None)
                         if not sys_id:
-                            target = self.diffsync.client.get_by_query(tablename, {mapping["reference"]["column"]: value})
+                            target = self.diffsync.client.get_by_query(
+                                tablename, {mapping["reference"]["column"]: value}
+                            )
                             if target is None:
                                 self.diffsync.job.log_warning(message=f"Unable to find reference target in {tablename}")
                             else:

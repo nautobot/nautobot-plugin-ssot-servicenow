@@ -1,11 +1,18 @@
 """Plugin declaration for nautobot_ssot_servicenow."""
 
-__version__ = "0.1.0"
+try:
+    from importlib import metadata
+except ImportError:
+    # Running on pre-3.8 Python; use importlib-metadata package
+    import importlib_metadata as metadata
+
+__version__ = metadata.version(__name__)
+
 
 from nautobot.extras.plugins import PluginConfig
 
 
-class NautobotSSOTServicenowConfig(PluginConfig):
+class NautobotSSOTServiceNowConfig(PluginConfig):
     """Plugin configuration for the nautobot_ssot_servicenow plugin."""
 
     name = "nautobot_ssot_servicenow"
@@ -15,10 +22,15 @@ class NautobotSSOTServicenowConfig(PluginConfig):
     description = "Nautobot SSoT ServiceNow."
     base_url = "ssot-servicenow"
     required_settings = []
-    min_version = "1.0.0"
+    min_version = "1.0.3"
     max_version = "1.9999"
     default_settings = {}
+    required_settings = [
+        "instance",
+        "username",
+        "password",
+    ]
     caching_config = {}
 
 
-config = NautobotSSOTServicenowConfig  # pylint:disable=invalid-name
+config = NautobotSSOTServiceNowConfig  # pylint:disable=invalid-name

@@ -19,7 +19,7 @@ class NautobotDiffSync(DiffSync):
         "location",
     ]
 
-    def __init__(self, *args, job=None, sync=None, **kwargs):
+    def __init__(self, *args, job, sync, **kwargs):
         """Initialize the NautobotDiffSync."""
         super().__init__(*args, **kwargs)
         self.job = job
@@ -27,10 +27,10 @@ class NautobotDiffSync(DiffSync):
 
     def load_regions(self, parent_location=None):
         """Recursively add Nautobot Region objects as DiffSync Location models."""
-        parent_pk = parent_location.pk if parent_location else None
+        parent_pk = parent_location.region_pk if parent_location else None
         for region_record in Region.objects.filter(parent=parent_pk):
             self.job.log_debug(message=f"Loading Region {region_record.name}")
-            location = self.location(diffsync=self, name=region_record.name, pk=region_record.pk)
+            location = self.location(diffsync=self, name=region_record.name, region_pk=region_record.pk)
             if parent_location:
                 parent_location.contained_locations.append(location)
                 location.parent_location_name = parent_location.name
@@ -44,8 +44,9 @@ class NautobotDiffSync(DiffSync):
             # A Site and a Region may share the same name; if so they become part of the same Location record.
             try:
                 location = self.get(self.location, site_record.name)
+                location.site_pk = site_record.pk
             except ObjectNotFound:
-                location = self.location(diffsync=self, name=site_record.name, pk=site_record.pk)
+                location = self.location(diffsync=self, name=site_record.name, site_pk=site_record.pk)
                 self.add(location)
             if site_record.region:
                 if location.name != site_record.region.name:
@@ -74,7 +75,9 @@ class NautobotDiffSync(DiffSync):
         self.load_sites()
 
         for location in self.get_all(self.location):
-            for device_record in Device.objects.filter(site__pk=location.pk):
+            if location.site_pk is None:
+                continue
+            for device_record in Device.objects.filter(site__pk=location.site_pk):
                 device = self.device(
                     diffsync=self,
                     name=device_record.name,

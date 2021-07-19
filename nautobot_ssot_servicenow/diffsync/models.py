@@ -24,23 +24,19 @@ class ServiceNowCRUDMixin:
             elif "reference" in mapping:
                 tablename = mapping["reference"]["table"]
                 sys_id = None
-                if "column" in mapping["reference"]:
-                    column_name = mapping["reference"]["column"]
-                    if value is not None:
-                        # Look in the cache first
-                        sys_id = self._sys_id_cache.get(tablename, {}).get(column_name, {}).get(value, None)
-                        if not sys_id:
-                            target = self.diffsync.client.get_by_query(
-                                tablename, {mapping["reference"]["column"]: value}
-                            )
-                            if target is None:
-                                self.diffsync.job.log_warning(message=f"Unable to find reference target in {tablename}")
-                            else:
-                                sys_id = target["sys_id"]
-                                self._sys_id_cache.setdefault(tablename, {}).setdefault(column_name, {})[value] = sys_id
-
-                else:
+                if "column" not in mapping["reference"]:
                     raise NotImplementedError
+                column_name = mapping["reference"]["column"]
+                if value is not None:
+                    # Look in the cache first
+                    sys_id = self._sys_id_cache.get(tablename, {}).get(column_name, {}).get(value, None)
+                    if not sys_id:
+                        target = self.diffsync.client.get_by_query(tablename, {mapping["reference"]["column"]: value})
+                        if target is None:
+                            self.diffsync.job.log_warning(message=f"Unable to find reference target in {tablename}")
+                        else:
+                            sys_id = target["sys_id"]
+                            self._sys_id_cache.setdefault(tablename, {}).setdefault(column_name, {})[value] = sys_id
 
                 record[mapping["reference"]["key"]] = sys_id
             else:

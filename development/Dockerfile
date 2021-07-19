@@ -1,14 +1,15 @@
 
 ARG PYTHON_VER
 ARG NAUTOBOT_VER
-# FROM ghcr.io/nautobot/nautobot-dev:${NAUTOBOT_VER}-py${PYTHON_VER}
-FROM nniehoff/nautobot-dev:${NAUTOBOT_VER}-py${PYTHON_VER}
+FROM ghcr.io/nautobot/nautobot-dev:${NAUTOBOT_VER}-py${PYTHON_VER}
 
 WORKDIR /source
 
+COPY packages/placeholder packages/*.whl /tmp/packages/
+RUN for wheel in /tmp/packages/*.whl; do [ -f "$wheel" ] || continue; pip install "$wheel"; done
+
 # Copy in only pyproject.toml/poetry.lock to help with caching this layer if no updates to dependencies
 COPY poetry.lock pyproject.toml /source/
-COPY packages/*.whl /source/packages/
 # --no-root declares not to install the project package since we're wanting to take advantage of caching dependency installation
 # and the project is copied in and installed after this step
 RUN poetry install --no-interaction --no-ansi --no-root

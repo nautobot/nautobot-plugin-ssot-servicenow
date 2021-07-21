@@ -23,16 +23,16 @@
         key: "location"
         table: "cmn_location"
         column: "name"
-    - field: "model"
-      reference:
-        key: "model_id"
-        table: "cmdb_model"
-        column: "name"
-    - field: "vendor"
-      reference:
-        key: "manufacturer"
-        table: "core_company"
-        column: "name"
+    # - field: "model"
+    #   reference:
+    #     key: "model_id"
+    #     table: "cmdb_model"
+    #     column: "name"
+    # - field: "vendor"
+    #   reference:
+    #     key: "manufacturer"
+    #     table: "core_company"
+    #     column: "name"
 - table: "cmdb_ci_network_adapter"
   modelname: "interface"
   parent:

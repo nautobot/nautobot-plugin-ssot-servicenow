@@ -8,11 +8,69 @@ from diffsync.enum import DiffSyncFlags
 from nautobot.dcim.models import Device, Interface, Region, Site
 from nautobot.extras.jobs import Job, BooleanVar
 
-from nautobot_ssot.jobs.base import DataMapping, DataTarget
+from nautobot_ssot.jobs.base import DataMapping, DataTarget, DataSource
 
 from .diffsync.adapter_nautobot import NautobotDiffSync
 from .diffsync.adapter_servicenow import ServiceNowDiffSync
+from .diffsync.tonb.tonb_adapter_nautobot import NautobotDiffSync as tonb_NautobotDiffSync
+from .diffsync.tonb.tonb_adapter_servicenow import ServiceNowDiffSync as tonb_ServiceNowDiffSync
 from .servicenow import ServiceNowClient
+
+
+class ServiceNowDataSource(DataSource, Job):
+    """Job syncing data from ServiceNow to Nautobot."""
+
+    debug = BooleanVar(description="Enable for more verbose debug logging")
+
+    class Meta:
+        """Metadata about this Job."""
+
+        name = "ServiceNow"
+        data_source = "ServiceNow"
+        data_source_icon = static("nautobot_ssot_servicenow/ServiceNow_logo.svg")
+        description = "Synchronize data from ServiceNow into Nautobot."
+
+    @classmethod
+    def data_mappings(cls):
+        """List describing the data mappings involved in this DataSource."""
+        return (DataMapping("Device", reverse("dcim:device_list"), "Device", None),)
+
+    @classmethod
+    def config_information(cls):
+        """Dictionary describing the configuration of this DataSource."""
+        configs = settings.PLUGINS_CONFIG.get("nautobot_ssot_servicenow", {})
+        return {
+            "ServiceNow instance": configs.get("instance"),
+            "Username": configs.get("username"),
+            # Password is intentionally omitted!
+        }
+
+    def sync_data(self):
+        """Sync a device data from ServiceNow into Nautobot."""
+        configs = settings.PLUGINS_CONFIG.get("nautobot_ssot_servicenow", {})
+        snc = ServiceNowClient(
+            instance=configs.get("instance"),
+            username=configs.get("username"),
+            password=configs.get("password"),
+            worker=self,
+        )
+        self.log_info(message="Loading current data from ServiceNow...")
+        servicenow_diffsync = tonb_ServiceNowDiffSync(client=snc, job=self, sync=self.sync)
+        servicenow_diffsync.load()
+
+        self.log_info(message="Loading current data from Nautobot...")
+        nautobot_diffsync = tonb_NautobotDiffSync(job=self, sync=self.sync)
+        nautobot_diffsync.load()
+
+        self.log_info(message="Calculating diffs...")
+        diff = nautobot_diffsync.diff_from(servicenow_diffsync)
+        self.sync.diff = diff.dict()
+        self.sync.save()
+
+        if not self.kwargs["dry_run"]:
+            self.log_info(message="Syncing from ServiceNow to Nautobot...")
+            nautobot_diffsync.sync_from(servicenow_diffsync)
+            self.log_info(message="Sync complete")
 
 
 class ServiceNowDataTarget(DataTarget, Job):
@@ -114,4 +172,4 @@ class ServiceNowDataTarget(DataTarget, Job):
         return None
 
 
-jobs = [ServiceNowDataTarget]
+jobs = [ServiceNowDataSource, ServiceNowDataTarget]

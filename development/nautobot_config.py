@@ -250,7 +250,7 @@ PLUGINS = ["nautobot_ssot", "nautobot_ssot_servicenow"]
 # Each key in the dictionary is the name of an installed plugin and its value is a dictionary of settings.
 PLUGINS_CONFIG = {
     "nautobot_ssot_servicenow": {
-        "instance": "dev12345",
+        "instance": "dev100664",
         "username": os.getenv("SERVICENOW_USERNAME", ""),
         "password": os.getenv("SERVICENOW_PASSWORD", ""),
     }

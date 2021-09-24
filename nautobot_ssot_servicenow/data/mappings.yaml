@@ -23,17 +23,17 @@
         key: "location"
         table: "cmn_location"
         column: "name"
-    # - field: "model"
-    #   reference:
-    #     key: "model_id"
-    #     table: "cmdb_model"
-    #     column: "name"
-    # - field: "vendor"
-    #   reference:
-    #     key: "manufacturer"
-    #     table: "core_company"
-    #     column: "name"
-- table: "cmdb_ci_network_adapter"
+    - field: "model"
+      reference:
+        key: "model_id"
+        table: "cmdb_model"
+        column: "name"
+    - field: "vendor"
+      reference:
+        key: "manufacturer"
+        table: "core_company"
+        column: "name"
+- table: "dscy_switchport"
   modelname: "interface"
   parent:
     modelname: "device"
@@ -41,9 +41,9 @@
     column: "cmdb_ci"
   mappings:
     - field: "name"
-      column: "name"
+      column: "interface_name"
     - field: "device_name"
       reference:
         key: "cmdb_ci"
-        table: "cmdb_ci_ip_switch"
+        table: "cmdb_ci"
         column: "name"

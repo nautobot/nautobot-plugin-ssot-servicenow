@@ -69,7 +69,7 @@ class ServiceNowDiffSync(DiffSync):
             - parent (dict): Dict of {"modelname": ..., "field": ...} used to link table records back to their parents
         """
         model_cls = getattr(self, modelname)
-        self.job.log_debug(f"Loading table {table} into {modelname} instances...")
+        self.job.log_debug(f"Loading table `{table}` into {modelname} instances...")
 
         if "parent" not in kwargs:
             # Load the entire table
@@ -80,7 +80,6 @@ class ServiceNowDiffSync(DiffSync):
             # This is necessary because, for example, the cmdb_ci_network_adapter table contains network interfaces
             # for ALL types of devices (servers, switches, firewalls, etc.) but we only have switches as parent objects
             for parent in self.get_all(kwargs["parent"]["modelname"]):
-                self.job.log_debug(f"Loading children of {parent}")
                 for record in self.client.all_table_entries(table, {kwargs["parent"]["column"]: parent.sys_id}):
                     self.load_record(table, record, model_cls, mappings, **kwargs)
 
@@ -94,16 +93,16 @@ class ServiceNowDiffSync(DiffSync):
 
         try:
             self.add(model)
-            # self.job.log_debug(f"Loaded {modelname} {model.get_unique_id()}")
         except ObjectAlreadyExists:
             # TODO: the baseline data in ServiceNow has a number of duplicate Location entries. For now, continue
-            self.job.log_debug(f"Duplicate object encountered for {modelname} {model.get_unique_id()}")
+            self.job.log_debug(f'Duplicate object encountered for {modelname} "{model.get_unique_id()}"')
 
         if "parent" in kwargs:
             parent_uid = getattr(model, kwargs["parent"]["field"])
             if parent_uid is None:
-                self.job.log_debug(
-                    f"Model {modelname} {model.get_unique_id} does not have a parent uid value in field {kwargs['parent']['field']}"
+                self.job.log_warning(
+                    message=f'Model {modelname} "{model.get_unique_id}" does not have a parent uid value '
+                    f"in field {kwargs['parent']['field']}"
                 )
             else:
                 parent_model = self.get(kwargs["parent"]["modelname"], parent_uid)
@@ -122,7 +121,7 @@ class ServiceNowDiffSync(DiffSync):
                 if "key" in mapping["reference"]:
                     key = mapping["reference"]["key"]
                     if key not in record:
-                        self.job.log_debug(f"Key {key} is not present in record {record}")
+                        self.job.log_warning(message=f"Key `{key}` is not present in record `{record}`")
                     else:
                         sys_id = record[key]
                 else:
@@ -132,8 +131,8 @@ class ServiceNowDiffSync(DiffSync):
                     if sys_id not in self.sys_ids.get(table, {}):
                         referenced_record = self.client.get_by_sys_id(table, sys_id)
                         if referenced_record is None:
-                            self.job.log_debug(
-                                f"Record references sys_id {sys_id}, but that was not found in table {table}"
+                            self.job.log_warning(
+                                f"Record references sys_id `{sys_id}`, but that was not found in table `{table}`"
                             )
                         else:
                             self.sys_ids.setdefault(table, {})[sys_id] = referenced_record

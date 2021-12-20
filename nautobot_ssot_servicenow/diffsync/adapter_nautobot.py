@@ -31,7 +31,6 @@ class NautobotDiffSync(DiffSync):
         """Recursively add Nautobot Region objects as DiffSync Location models."""
         parent_pk = parent_location.region_pk if parent_location else None
         for region_record in Region.objects.filter(parent=parent_pk):
-            self.job.log_debug(message=f"Loading Region {region_record.name}")
             location = self.location(diffsync=self, name=region_record.name, region_pk=region_record.pk)
             if parent_location:
                 parent_location.contained_locations.append(location)
@@ -42,7 +41,6 @@ class NautobotDiffSync(DiffSync):
     def load_sites(self):
         """Add Nautobot Site objects as DiffSync Location models."""
         for site_record in Site.objects.all():
-            self.job.log_debug(message=f"Loading Site {site_record.name}")
             # A Site and a Region may share the same name; if so they become part of the same Location record.
             try:
                 location = self.get(self.location, site_record.name)

@@ -19,11 +19,13 @@ class NautobotDiffSync(DiffSync):
         "location",
     ]
 
-    def __init__(self, *args, job, sync, **kwargs):
+    def __init__(self, *args, job, sync, other_diffsync=None, **kwargs):
         """Initialize the NautobotDiffSync."""
         super().__init__(*args, **kwargs)
         self.job = job
         self.sync = sync
+        self.other_diffsync = other_diffsync
+        self.sync_tag = None  # to be set later
 
     def load_regions(self, parent_location=None):
         """Recursively add Nautobot Region objects as DiffSync Location models."""
@@ -94,3 +96,17 @@ class NautobotDiffSync(DiffSync):
 
                 for interface_record in Interface.objects.filter(device=device_record):
                     self.load_interface(interface_record, device)
+
+    def tag_object(self, modelname, unique_id):
+        """Apply self.sync_tag to the identified object."""
+        if not self.sync_tag:
+            return
+        model_instance = self.get(modelname, unique_id)
+        if modelname == "location":
+            # Unfortunately Regions cannot be tagged.
+            if model_instance.site_pk is not None:
+                Site.objects.get(pk=model_instance.site_pk).tags.add(self.sync_tag)
+        elif modelname == "device":
+            Device.objects.get(pk=model_instance.pk).tags.add(self.sync_tag)
+        elif modelname == "interface":
+            Interface.objects.get(pk=model_instance.pk).tags.add(self.sync_tag)

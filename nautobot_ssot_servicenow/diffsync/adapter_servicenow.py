@@ -22,12 +22,13 @@ class ServiceNowDiffSync(DiffSync):
 
     DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data"))
 
-    def __init__(self, *args, client=None, job=None, sync=None, **kwargs):
+    def __init__(self, *args, client=None, job=None, sync=None, other_diffsync=None, **kwargs):
         """Initialize the ServiceNowDiffSync adapter."""
         super().__init__(*args, **kwargs)
         self.client = client
         self.job = job
         self.sync = sync
+        self.other_diffsync = other_diffsync
         self.sys_ids = {}
         self.mapping_data = []
 

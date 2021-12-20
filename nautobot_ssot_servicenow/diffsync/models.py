@@ -63,6 +63,10 @@ class ServiceNowCRUDMixin:
         sn_record = model.map_data_to_sn_record(data=dict(**ids, **attrs), mapping_entry=entry)
         sn_resource.create(payload=sn_record)
 
+        # Apply tag in Nautobot if applicable
+        if diffsync.other_diffsync is not None:
+            diffsync.other_diffsync.tag_object(cls.get_type(), ids)
+
         return model
 
     def update(self, attrs):
@@ -86,10 +90,15 @@ class ServiceNowCRUDMixin:
             )
             return None
 
+        super().update(attrs)
+
         sn_record = self.map_data_to_sn_record(data=attrs, mapping_entry=entry, existing_record=record)
         sn_resource.update(query=query, payload=sn_record)
 
-        super().update(attrs)
+        # Apply tag in Nautobot if applicable
+        if self.diffsync.other_diffsync is not None:
+            self.diffsync.other_diffsync.tag_object(self.get_type(), self.get_unique_id())
+
         return self
 
     # TODO delete() method

@@ -20,6 +20,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.6"
+nautobot = "*"
 Jinja2 = "<3"
 pysnow = "^0.7.17"
 PyYAML = "^5.4.1"

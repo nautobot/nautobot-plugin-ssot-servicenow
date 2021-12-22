@@ -16,13 +16,6 @@
     field: "location_name"
     column: "location"
   mappings:
-    - field: "name"
-      column: "name"
-    - field: "location_name"
-      reference:
-        key: "location"
-        table: "cmn_location"
-        column: "name"
     # - field: "model"
     #   reference:
     #     key: "model_id"
@@ -33,6 +26,13 @@
     #     key: "manufacturer"
     #     table: "core_company"
     #     column: "name"
+    - field: "name"
+      column: "name"
+    - field: "location_name"
+      reference:
+        key: "location"
+        table: "cmn_location"
+        column: "name"
 - table: "cmdb_ci_network_adapter"
   modelname: "interface"
   parent:

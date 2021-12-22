@@ -132,7 +132,7 @@ class ServiceNowDiffSync(DiffSync):
                         referenced_record = self.client.get_by_sys_id(table, sys_id)
                         if referenced_record is None:
                             self.job.log_warning(
-                                f"Record references sys_id `{sys_id}`, but that was not found in table `{table}`"
+                                message=f"Record references sys_id `{sys_id}`, but that was not found in table `{table}`"
                             )
                         else:
                             self.sys_ids.setdefault(table, {})[sys_id] = referenced_record

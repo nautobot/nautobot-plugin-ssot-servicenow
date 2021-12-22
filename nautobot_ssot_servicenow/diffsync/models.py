@@ -86,11 +86,10 @@ class ServiceNowCRUDMixin:
             )
             return None
 
-        super().update(attrs)
-
         sn_record = self.map_data_to_sn_record(data=attrs, mapping_entry=entry, existing_record=record)
         sn_resource.update(query=query, payload=sn_record)
 
+        super().update(attrs)
         return self
 
     # TODO delete() method

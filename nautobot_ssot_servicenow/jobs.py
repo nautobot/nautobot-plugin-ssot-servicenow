@@ -65,14 +65,13 @@ class ServiceNowDataTarget(DataTarget, Job):
             password=configs.get("password"),
             worker=self,
         )
-        servicenow_diffsync = ServiceNowDiffSync(client=snc, job=self, sync=self.sync)
-
-        nautobot_diffsync = NautobotDiffSync(job=self, sync=self.sync)
 
         self.log_info(message="Loading current data from ServiceNow...")
+        servicenow_diffsync = ServiceNowDiffSync(client=snc, job=self, sync=self.sync)
         servicenow_diffsync.load()
 
         self.log_info(message="Loading current data from Nautobot...")
+        nautobot_diffsync = NautobotDiffSync(job=self, sync=self.sync)
         nautobot_diffsync.load()
 
         diffsync_flags = DiffSyncFlags.CONTINUE_ON_FAILURE

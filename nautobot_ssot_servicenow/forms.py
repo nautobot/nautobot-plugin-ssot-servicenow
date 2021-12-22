@@ -10,7 +10,10 @@ from .models import SSOTServiceNowConfig
 class SSOTServiceNowConfigForm(forms.ModelForm):
     """Plugin configuration form for nautobot-ssot-servicenow."""
 
-    servicenow_instance = forms.CharField(required=True)
+    servicenow_instance = forms.CharField(
+        required=True,
+        help_text="ServiceNow instance name, will be used as <code>&lt;instance&gt;.servicenow.com</code>.",
+    )
     servicenow_secrets = DynamicModelChoiceField(
         queryset=SecretsGroup.objects.all(),
         required=True,

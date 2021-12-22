@@ -4,6 +4,8 @@ from diffsync import DiffSync
 from diffsync.exceptions import ObjectNotFound
 
 from nautobot.dcim.models import Device, Interface, Region, Site
+from nautobot.extras.models import Tag
+from nautobot.utilities.choices import ColorChoices
 
 from . import models
 
@@ -19,13 +21,11 @@ class NautobotDiffSync(DiffSync):
         "location",
     ]
 
-    def __init__(self, *args, job, sync, other_diffsync=None, **kwargs):
+    def __init__(self, *args, job, sync, **kwargs):
         """Initialize the NautobotDiffSync."""
         super().__init__(*args, **kwargs)
         self.job = job
         self.sync = sync
-        self.other_diffsync = other_diffsync
-        self.sync_tag = None  # to be set later
 
     def load_regions(self, parent_location=None):
         """Recursively add Nautobot Region objects as DiffSync Location models."""
@@ -95,16 +95,37 @@ class NautobotDiffSync(DiffSync):
                 for interface_record in Interface.objects.filter(device=device_record):
                     self.load_interface(interface_record, device)
 
-    def tag_object(self, modelname, unique_id):
-        """Apply self.sync_tag to the identified object."""
-        if not self.sync_tag:
-            return
+    def tag_involved_objects(self, target):
+        """Tag all objects that were successfully synced to the target."""
+        # Delete any existing "ssot-synced-to-servicenow" tag so as to untag existing objects
+        if Tag.objects.filter(slug="ssot-synced-to-servicenow").exists():
+            Tag.objects.get(slug="ssot-synced-to-servicenow").delete()
+        # Ensure that "ssot-synced-to-servicenow" tag is created
+        tag = Tag.objects.create(
+            slug="ssot-synced-to-servicenow",
+            name="SSoT Synced to ServiceNow",
+            description="Object synced successfully from Nautobot to ServiceNow",
+            color=ColorChoices.COLOR_LIGHT_GREEN,
+        )
+        for modelname in ["location", "device", "interface"]:
+            for local_instance in self.get_all(modelname):
+                unique_id = local_instance.get_unique_id()
+                # Verify that the object now has a counterpart in the target DiffSync
+                try:
+                    target.get(modelname, unique_id)
+                except ObjectNotFound:
+                    continue
+
+                self.tag_object(modelname, unique_id, tag)
+
+    def tag_object(self, modelname, unique_id, tag):
+        """Apply the given tag to the identified object."""
         model_instance = self.get(modelname, unique_id)
         if modelname == "location":
             # Unfortunately Regions cannot be tagged.
             if model_instance.site_pk is not None:
-                Site.objects.get(pk=model_instance.site_pk).tags.add(self.sync_tag)
+                Site.objects.get(pk=model_instance.site_pk).tags.add(tag)
         elif modelname == "device":
-            Device.objects.get(pk=model_instance.pk).tags.add(self.sync_tag)
+            Device.objects.get(pk=model_instance.pk).tags.add(tag)
         elif modelname == "interface":
-            Interface.objects.get(pk=model_instance.pk).tags.add(self.sync_tag)
+            Interface.objects.get(pk=model_instance.pk).tags.add(tag)

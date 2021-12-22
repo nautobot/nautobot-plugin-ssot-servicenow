@@ -6,8 +6,6 @@ from diffsync.enum import DiffSyncFlags
 
 from nautobot.dcim.models import Device, Interface, Region, Site
 from nautobot.extras.jobs import Job, BooleanVar
-from nautobot.extras.models import Tag
-from nautobot.utilities.choices import ColorChoices
 
 from nautobot_ssot.jobs.base import DataMapping, DataTarget
 
@@ -69,8 +67,7 @@ class ServiceNowDataTarget(DataTarget, Job):
         )
         servicenow_diffsync = ServiceNowDiffSync(client=snc, job=self, sync=self.sync)
 
-        nautobot_diffsync = NautobotDiffSync(job=self, sync=self.sync, other_diffsync=servicenow_diffsync)
-        servicenow_diffsync.other_diffsync = nautobot_diffsync
+        nautobot_diffsync = NautobotDiffSync(job=self, sync=self.sync)
 
         self.log_info(message="Loading current data from ServiceNow...")
         servicenow_diffsync.load()
@@ -91,18 +88,6 @@ class ServiceNowDataTarget(DataTarget, Job):
 
         if not self.kwargs["dry_run"]:
             self.log_info(message="Syncing from Nautobot to ServiceNow...")
-            # Delete any existing "ssot-synced-to-servicenow" tag so as to untag existing objects
-            if Tag.objects.filter(slug="ssot-synced-to-servicenow").exists():
-                Tag.objects.get(slug="ssot-synced-to-servicenow").delete()
-            # Ensure that "ssot-synced-to-servicenow" tag is created
-            tag = Tag.objects.create(
-                slug="ssot-synced-to-servicenow",
-                name="SSoT Synced to ServiceNow",
-                description="Object synced successfully from Nautobot to ServiceNow",
-                color=ColorChoices.COLOR_LIGHT_GREEN,
-            )
-
-            nautobot_diffsync.sync_tag = tag
             servicenow_diffsync.sync_from(nautobot_diffsync, flags=diffsync_flags)
             self.log_info(message="Sync complete")
 

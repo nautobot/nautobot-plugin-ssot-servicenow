@@ -2,6 +2,7 @@
 import os
 
 from diffsync import DiffSync
+from diffsync.enum import DiffSyncFlags
 from diffsync.exceptions import ObjectAlreadyExists
 from jinja2 import Environment, FileSystemLoader
 import yaml
@@ -22,13 +23,12 @@ class ServiceNowDiffSync(DiffSync):
 
     DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data"))
 
-    def __init__(self, *args, client=None, job=None, sync=None, other_diffsync=None, **kwargs):
+    def __init__(self, *args, client=None, job=None, sync=None, **kwargs):
         """Initialize the ServiceNowDiffSync adapter."""
         super().__init__(*args, **kwargs)
         self.client = client
         self.job = job
         self.sync = sync
-        self.other_diffsync = other_diffsync
         self.sys_ids = {}
         self.mapping_data = []
 
@@ -145,3 +145,11 @@ class ServiceNowDiffSync(DiffSync):
             attrs[mapping["field"]] = value
 
         return attrs
+
+    def sync_complete(self, source, diff, flags=DiffSyncFlags.NONE, logger=None):
+        """Callback after the `sync_from` operation has completed and updated this instance.
+
+        Note that this callback is **only** triggered if the sync actually resulted in data changes.
+        If there are no detected changes, this callback will **not** be called.
+        """
+        source.tag_involved_objects(target=self)

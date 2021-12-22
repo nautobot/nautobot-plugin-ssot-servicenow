@@ -18,7 +18,7 @@ The plugin is available as a Python package in PyPI and can be installed with `p
 pip install nautobot-ssot-servicenow
 ```
 
-> The plugin is compatible with Nautobot 1.0.3 and higher
+> The plugin is compatible with Nautobot 1.2.0 and higher
 
 ## Configuration
 
@@ -48,6 +48,10 @@ The plugin behavior can be controlled with the following list of settings:
 - `instance`: The ServiceNow instance to point to (as in `<instance>.servicenow.com`)
 - `username`: Username to access this instance
 - `password`: Password to access this instance
+
+There is also the option of omitting these settings from `PLUGINS_CONFIG` and instead defining them through the UI at `/plugins/ssot-servicenow/config/` (reachable by navigating to **Plugins > Installed Plugins** then clicking the "gear" icon next to the *Nautobot SSoT ServiceNow* entry) using Nautobot's standard UI and [secrets](https://nautobot.readthedocs.io/en/stable/core-functionality/secrets/) functionality.
+
+> If you configure the plugin's settings in `PLUGINS_CONFIG`, those values will take precedence over any configuration in the UI.
 
 ## Usage
 

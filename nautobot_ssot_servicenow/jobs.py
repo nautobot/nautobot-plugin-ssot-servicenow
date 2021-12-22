@@ -1,5 +1,4 @@
 """ServiceNow Data Target Job."""
-from django.conf import settings
 from django.templatetags.static import static
 from django.urls import reverse
 
@@ -15,6 +14,7 @@ from nautobot_ssot.jobs.base import DataMapping, DataTarget
 from .diffsync.adapter_nautobot import NautobotDiffSync
 from .diffsync.adapter_servicenow import ServiceNowDiffSync
 from .servicenow import ServiceNowClient
+from .utils import get_servicenow_parameters
 
 
 class ServiceNowDataTarget(DataTarget, Job):
@@ -51,7 +51,7 @@ class ServiceNowDataTarget(DataTarget, Job):
     @classmethod
     def config_information(cls):
         """Dictionary describing the configuration of this DataTarget."""
-        configs = settings.PLUGINS_CONFIG.get("nautobot_ssot_servicenow", {})
+        configs = get_servicenow_parameters()
         return {
             "ServiceNow instance": configs.get("instance"),
             "Username": configs.get("username"),
@@ -60,7 +60,7 @@ class ServiceNowDataTarget(DataTarget, Job):
 
     def sync_data(self):
         """Sync a slew of Nautobot data into ServiceNow."""
-        configs = settings.PLUGINS_CONFIG.get("nautobot_ssot_servicenow", {})
+        configs = get_servicenow_parameters()
         snc = ServiceNowClient(
             instance=configs.get("instance"),
             username=configs.get("username"),

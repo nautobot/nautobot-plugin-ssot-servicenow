@@ -18,7 +18,7 @@ The plugin is available as a Python package in PyPI and can be installed with `p
 pip install nautobot-ssot-servicenow
 ```
 
-> The plugin is compatible with Nautobot 1.0.3 and higher
+> The plugin is compatible with Nautobot 1.2.0 and higher
 
 Once installed, the plugin needs to be enabled in your `nautobot_config.py` and configured appropriately:
 
@@ -47,6 +47,10 @@ The plugin behavior can be controlled with the following list of settings:
 - `username`: Username to access this instance
 - `password`: Password to access this instance
 
+There is also the option of omitting these settings from `PLUGINS_CONFIG` and instead defining them through the UI at `/plugins/ssot-servicenow/config/` (reachable by navigating to **Plugins > Installed Plugins** then clicking the "gear" icon next to the *Nautobot SSoT ServiceNow* entry) using Nautobot's standard UI and [secrets](https://nautobot.readthedocs.io/en/stable/core-functionality/secrets/) functionality.
+
+> If you configure the plugin's settings in `PLUGINS_CONFIG`, those values will take precedence over any configuration in the UI.
+
 ## Questions
 
 For any questions or comments, please check the [FAQ](FAQ.md) first and feel free to swing by the [Network to Code slack channel](https://networktocode.slack.com/) (channel #networktocode).
@@ -56,8 +60,8 @@ Sign up [here](http://slack.networktocode.com/)
 
 Once the plugin is installed and configured, from the Nautobot SSoT dashboard view (`/plugins/ssot/`), ServiceNow will be shown as a Data Target. You can click the **Sync** button to access a form view from which you can run the Nautobot-to-ServiceNow synchronization Job. Running the job will redirect you to a Nautobot **Job Result** view, from which you can access the **SSoT Sync Details** view to see detailed information about the outcome of the sync Job.
 
-![Detail View](./docs/images/detail-view.png)
+![Detail View](https://raw.githubusercontent.com/nautobot/nautobot-plugin-ssot-servicenow/develop/docs/images/detail-view.png)
 
 ---
 
-![Results View](./docs/images/result-view.png)
+![Results View](https://raw.githubusercontent.com/nautobot/nautobot-plugin-ssot-servicenow/develop/docs/images/result-view.png)

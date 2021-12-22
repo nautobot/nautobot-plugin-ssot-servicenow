@@ -1,12 +1,16 @@
 """Test the Job class in this plugin."""
+import os
+from unittest import mock
 
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Region, Site
-from nautobot.extras.models import Status
+from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
+from nautobot.extras.models import Secret, SecretsGroup, SecretsGroupAssociation, Status
 
 from nautobot_ssot_servicenow.jobs import ServiceNowDataTarget
+from nautobot_ssot_servicenow.models import SSOTServiceNowConfig
 
 
 class ServiceNowDataTargetJobTestCase(TestCase):
@@ -47,14 +51,60 @@ class ServiceNowDataTargetJobTestCase(TestCase):
     @override_settings(
         PLUGINS_CONFIG={"nautobot_ssot_servicenow": {"instance": "dev12345", "username": "admin", "password": ""}}
     )
-    def test_config_information(self):
-        """Verify the config_information() API."""
+    def test_config_information_settings(self):
+        """Verify the config_information() API for configs provided in Django settings."""
         config_information = ServiceNowDataTarget.config_information()
         self.assertEqual(
             config_information,
             {
                 "ServiceNow instance": "dev12345",
                 "Username": "admin",
+                # password should NOT be present!
+            },
+        )
+
+    @override_settings(PLUGINS_CONFIG={})
+    @mock.patch.dict(os.environ, {"SNOW_USERNAME": "someuser", "SNOW_PASSWORD": "notsosecret"})
+    def test_config_information_db(self):
+        """Verify the config_information() API for configs provided in the database."""
+        db_config = SSOTServiceNowConfig.load()
+        db_config.servicenow_instance = "dev98765"
+        user_secret = Secret.objects.create(
+            name="ServiceNow Username",
+            slug="servicenow-username",
+            provider="environment-variable",
+            parameters={"variable": "SNOW_USERNAME"},
+        )
+        password_secret = Secret.objects.create(
+            name="ServiceNow Password",
+            slug="servicenow-password",
+            provider="environment-variable",
+            parameters={"variable": "SNOW_PASSWORD"},
+        )
+        db_config.servicenow_secrets = SecretsGroup.objects.create(
+            name="ServiceNow Secrets",
+            slug="servicenow-secrets",
+        )
+        SecretsGroupAssociation.objects.create(
+            group=db_config.servicenow_secrets,
+            secret=user_secret,
+            access_type=SecretsGroupAccessTypeChoices.TYPE_REST,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
+        )
+        SecretsGroupAssociation.objects.create(
+            group=db_config.servicenow_secrets,
+            secret=password_secret,
+            access_type=SecretsGroupAccessTypeChoices.TYPE_REST,
+            secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        )
+        db_config.save()
+
+        config_information = ServiceNowDataTarget.config_information()
+        self.assertEqual(
+            config_information,
+            {
+                "ServiceNow instance": "dev98765",
+                "Username": "someuser",
                 # password should NOT be present!
             },
         )

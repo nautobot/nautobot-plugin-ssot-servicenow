@@ -28,6 +28,7 @@ class NautobotSSOTServiceNowConfig(PluginConfig):
     required_settings = []
     caching_config = {}
 
+    home_view_name = "plugins:nautobot_ssot:dashboard"  # a link to the ServiceNow job would be even better
     config_view_name = "plugins:nautobot_ssot_servicenow:config"
 
 

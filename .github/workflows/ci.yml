@@ -74,8 +74,8 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: "3.6"
-        nautobot-version: "1.2.1"
+        python-version: ["3.6"]
+        nautobot-version: ["1.2.1"]
     env:
       INVOKE_NAUTOBOT_SSOT_SERVICENOW_PYTHON_VER: "${{ matrix.python-version }}"
       INVOKE_NAUTOBOT_SSOT_SERVICENOW_NAUTOBOT_VER: "${{ matrix.nautobot-version }}"

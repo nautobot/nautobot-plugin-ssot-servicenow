@@ -5,9 +5,6 @@ FROM ghcr.io/nautobot/nautobot-dev:${NAUTOBOT_VER}-py${PYTHON_VER}
 
 WORKDIR /source
 
-COPY packages/placeholder packages/*.whl /tmp/packages/
-RUN for wheel in /tmp/packages/*.whl; do [ -f "$wheel" ] || continue; pip install "$wheel"; done
-
 # Copy in only pyproject.toml/poetry.lock to help with caching this layer if no updates to dependencies
 COPY poetry.lock pyproject.toml /source/
 # --no-root declares not to install the project package since we're wanting to take advantage of caching dependency installation

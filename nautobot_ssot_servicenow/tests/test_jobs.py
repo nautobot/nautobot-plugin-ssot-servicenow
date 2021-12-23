@@ -28,25 +28,35 @@ class ServiceNowDataTargetJobTestCase(TestCase):
         """Verify correctness of the data_mappings() API."""
         mappings = ServiceNowDataTarget.data_mappings()
 
-        self.assertEqual("Region", mappings[0].source_name)
-        self.assertEqual(reverse("dcim:region_list"), mappings[0].source_url)
-        self.assertEqual("Location", mappings[0].target_name)
+        self.assertEqual("Device", mappings[0].source_name)
+        self.assertEqual(reverse("dcim:device_list"), mappings[0].source_url)
+        self.assertEqual("IP Switch", mappings[0].target_name)
         self.assertIsNone(mappings[0].target_url)
 
-        self.assertEqual("Site", mappings[1].source_name)
-        self.assertEqual(reverse("dcim:site_list"), mappings[1].source_url)
-        self.assertEqual("Location", mappings[1].target_name)
+        self.assertEqual("Device Type", mappings[1].source_name)
+        self.assertEqual(reverse("dcim:devicetype_list"), mappings[1].source_url)
+        self.assertEqual("Hardware Product Model", mappings[1].target_name)
         self.assertIsNone(mappings[1].target_url)
 
-        self.assertEqual("Device", mappings[2].source_name)
-        self.assertEqual(reverse("dcim:device_list"), mappings[2].source_url)
-        self.assertEqual("IP Switch", mappings[2].target_name)
+        self.assertEqual("Interface", mappings[2].source_name)
+        self.assertEqual(reverse("dcim:interface_list"), mappings[2].source_url)
+        self.assertEqual("Interface", mappings[2].target_name)
         self.assertIsNone(mappings[2].target_url)
 
-        self.assertEqual("Interface", mappings[3].source_name)
-        self.assertEqual(reverse("dcim:interface_list"), mappings[3].source_url)
-        self.assertEqual("Interface", mappings[3].target_name)
+        self.assertEqual("Manufacturer", mappings[3].source_name)
+        self.assertEqual(reverse("dcim:manufacturer_list"), mappings[3].source_url)
+        self.assertEqual("Company", mappings[3].target_name)
         self.assertIsNone(mappings[3].target_url)
+
+        self.assertEqual("Region", mappings[4].source_name)
+        self.assertEqual(reverse("dcim:region_list"), mappings[4].source_url)
+        self.assertEqual("Location", mappings[4].target_name)
+        self.assertIsNone(mappings[4].target_url)
+
+        self.assertEqual("Site", mappings[5].source_name)
+        self.assertEqual(reverse("dcim:site_list"), mappings[5].source_url)
+        self.assertEqual("Location", mappings[5].target_name)
+        self.assertIsNone(mappings[5].target_url)
 
     @override_settings(
         PLUGINS_CONFIG={"nautobot_ssot_servicenow": {"instance": "dev12345", "username": "admin", "password": ""}}

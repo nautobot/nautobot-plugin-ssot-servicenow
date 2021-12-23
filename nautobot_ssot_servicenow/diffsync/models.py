@@ -1,5 +1,5 @@
 """DiffSyncModel subclasses for Nautobot-to-ServiceNow data sync."""
-from typing import List, Optional
+from typing import List, Optional, Union
 import uuid
 
 from diffsync import DiffSyncModel
@@ -95,12 +95,50 @@ class ServiceNowCRUDMixin:
     # TODO delete() method
 
 
+class Company(ServiceNowCRUDMixin, DiffSyncModel):
+    """ServiceNow Company model."""
+
+    _modelname = "company"
+    _identifiers = ("name",)
+    _attributes = ("manufacturer",)
+    _children = {
+        "product_model": "product_models",
+    }
+
+    name: str
+    manufacturer: bool = False
+
+    product_models: List["ProductModel"] = list()
+
+    sys_id: Optional[str] = None
+    pk: Optional[uuid.UUID] = None
+
+
+class ProductModel(ServiceNowCRUDMixin, DiffSyncModel):
+    """ServiceNow Hardware Product Model model."""
+
+    _modelname = "product_model"
+    _identifiers = ("manufacturer_name", "model_name", "model_number")
+
+    manufacturer_name: Optional[str]  # some ServiceNow products have no associated manufacturer?
+    # Nautobot has only one combined "model" field, but ServiceNow has both name and number
+    model_name: str
+    model_number: str
+
+    sys_id: Optional[str] = None
+    pk: Optional[uuid.UUID] = None
+
+
 class Location(ServiceNowCRUDMixin, DiffSyncModel):
     """ServiceNow Location model."""
 
     _modelname = "location"
     _identifiers = ("name",)
-    _attributes = ("parent_location_name",)
+    _attributes = (
+        "parent_location_name",
+        "latitude",
+        "longitude",
+    )
     _children = {
         "device": "devices",
     }
@@ -109,6 +147,8 @@ class Location(ServiceNowCRUDMixin, DiffSyncModel):
 
     parent_location_name: Optional[str]
     contained_locations: List["Location"] = list()
+    latitude: Union[float, str] = ""  # can't use Optional[float] because an empty string doesn't map to None
+    longitude: Union[float, str] = ""
 
     devices: List["Device"] = list()
 
@@ -125,7 +165,13 @@ class Device(ServiceNowCRUDMixin, DiffSyncModel):
     # For now we do not store more of the device fields in ServiceNow:
     # platform, model, role, vendor
     # ...as we would need to sync these data models to ServiceNow as well, and we don't do that yet.
-    _attributes = ("location_name",)
+    _attributes = (
+        "location_name",
+        "asset_tag",
+        "manufacturer_name",
+        "model_name",
+        "serial",
+    )
     _children = {
         "interface": "interfaces",
     }
@@ -133,7 +179,11 @@ class Device(ServiceNowCRUDMixin, DiffSyncModel):
     name: str
 
     location_name: Optional[str]
-    model: Optional[str]
+    asset_tag: Optional[str]
+    manufacturer_name: Optional[str]
+    model_name: Optional[str]
+    serial: Optional[str]
+
     platform: Optional[str]
     role: Optional[str]
     vendor: Optional[str]
@@ -201,6 +251,8 @@ class IPAddress(ServiceNowCRUDMixin, DiffSyncModel):
     pk: Optional[uuid.UUID] = None
 
 
-Location.update_forward_refs()
+Company.update_forward_refs()
 Device.update_forward_refs()
 Interface.update_forward_refs()
+Location.update_forward_refs()
+ProductModel.update_forward_refs()

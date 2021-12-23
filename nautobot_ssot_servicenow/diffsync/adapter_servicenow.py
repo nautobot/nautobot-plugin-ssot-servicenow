@@ -13,11 +13,14 @@ from . import models
 class ServiceNowDiffSync(DiffSync):
     """DiffSync adapter using pysnow to communicate with a ServiceNow server."""
 
+    company = models.Company
+    device = models.Device  # child of location
+    interface = models.Interface  # child of device
     location = models.Location
-    device = models.Device
-    interface = models.Interface
+    product_model = models.ProductModel  # child of company
 
     top_level = [
+        "company",
         "location",
     ]
 
@@ -83,6 +86,8 @@ class ServiceNowDiffSync(DiffSync):
                 for record in self.client.all_table_entries(table, {kwargs["parent"]["column"]: parent.sys_id}):
                     self.load_record(table, record, model_cls, mappings, **kwargs)
 
+        self.job.log_info(message=f"Loaded {len(self.get_all(modelname))} records from table `{table}`")
+
     def load_record(self, table, record, model_cls, mappings, **kwargs):
         """Helper method to load_table()."""
         self.sys_ids.setdefault(table, {})[record["sys_id"]] = record
@@ -132,7 +137,8 @@ class ServiceNowDiffSync(DiffSync):
                         referenced_record = self.client.get_by_sys_id(table, sys_id)
                         if referenced_record is None:
                             self.job.log_warning(
-                                message=f"Record references sys_id `{sys_id}`, but that was not found in table `{table}`"
+                                message=f"Record `{record.get('name', record)}` field `{mapping['field']}` "
+                                f"references sys_id `{sys_id}`, but that was not found in table `{table}`"
                             )
                         else:
                             self.sys_ids.setdefault(table, {})[sys_id] = referenced_record

@@ -15,6 +15,10 @@ from nautobot_ssot_servicenow.diffsync.adapter_servicenow import ServiceNowDiffS
 class MockServiceNowClient:
     """Mock version of the ServiceNowClient class using canned data."""
 
+    def get_by_sys_id(self, table, sys_id):  # pylint: disable=unused-argument,no-self-use
+        """Get a record with a given sys_id from a given table."""
+        return None
+
     def all_table_entries(self, table, query=None):  # pylint: disable=no-self-use
         """Iterator over all records in a given table."""
 

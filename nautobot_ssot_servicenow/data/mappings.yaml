@@ -1,4 +1,27 @@
 ---
+- table: "core_company"
+  modelname: "company"
+  mappings:
+    - field: "name"
+      column: "name"
+    - field: "manufacturer"
+      column: "manufacturer"
+- table: "cmdb_hardware_product_model"
+  modelname: "product_model"
+  parent:
+    modelname: "company"
+    field: "manufacturer_name"
+    column: "manufacturer"
+  mappings:
+    - field: "manufacturer_name"
+      reference:
+        key: "manufacturer"
+        table: "core_company"
+        column: "name"
+    - field: "model_name"
+      column: "name"
+    - field: "model_number"
+      column: "model_number"
 - table: "cmn_location"
   modelname: "location"
   mappings:
@@ -9,6 +32,10 @@
         key: "parent"
         table: "cmn_location"
         column: "name"
+    - field: "latitude"
+      column: "latitude"
+    - field: "longitude"
+      column: "longitude"
 - table: "cmdb_ci_ip_switch"
   modelname: "device"
   parent:
@@ -16,16 +43,6 @@
     field: "location_name"
     column: "location"
   mappings:
-    # - field: "model"
-    #   reference:
-    #     key: "model_id"
-    #     table: "cmdb_model"
-    #     column: "name"
-    # - field: "vendor"
-    #   reference:
-    #     key: "manufacturer"
-    #     table: "core_company"
-    #     column: "name"
     - field: "name"
       column: "name"
     - field: "location_name"
@@ -33,6 +50,20 @@
         key: "location"
         table: "cmn_location"
         column: "name"
+    - field: "asset_tag"
+      column: "asset_tag"
+    - field: "manufacturer_name"
+      reference:
+        key: "manufacturer"
+        table: "core_company"
+        column: "name"
+    - field: "model_name"
+      reference:
+        key: "model_id"
+        table: "cmdb_hardware_product_model"
+        column: "name"
+    - field: "serial"
+      column: "serial_number"
 - table: "cmdb_ci_network_adapter"
   modelname: "interface"
   parent:

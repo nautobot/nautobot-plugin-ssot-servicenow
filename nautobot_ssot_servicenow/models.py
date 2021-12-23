@@ -1,6 +1,7 @@
 """Configuration data model for nautobot-ssot-servicenow."""
 
 from django.db import models
+from django.shortcuts import reverse
 
 from nautobot.core.models import BaseModel
 
@@ -35,3 +36,7 @@ class SSOTServiceNowConfig(BaseModel):
     def __str__(self):
         """String representation of singleton instance."""
         return "SSoT ServiceNow Configuration"
+
+    def get_absolute_url(self):  # pylint: disable=no-self-use
+        """Get URL for the associated configuration view."""
+        return reverse("plugins:nautobot_ssot_servicenow:config")

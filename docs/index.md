@@ -6,6 +6,8 @@ A plugin for [Nautobot](https://github.com/nautobot/nautobot), building atop the
 
 This plugin provides the ability to synchronize basic data from Nautobot into ServiceNow. Currently the following data is mapped and synchronized:
 
+- Nautobot Manufacturer table to ServiceNow Company table
+- Nautobot DeviceType table to ServiceNow Hardware Product Model table
 - Nautobot Region and Site tables to ServiceNow Location table
 - Nautobot Device table to ServiceNow IP Switch table
 - Nautobot Interface table to ServiceNow Interface table

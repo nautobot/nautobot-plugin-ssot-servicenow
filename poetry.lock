@@ -987,17 +987,6 @@ importlib-metadata = {version = ">=4.4", markers = "python_version < \"3.10\""}
 testing = ["coverage", "pyyaml"]
 
 [[package]]
-name = "markdown-include"
-version = "0.6.0"
-description = "This is an extension to Python-Markdown which provides an \"include\" function, similar to that found in LaTeX (and also the C pre-processor and Fortran). I originally wrote it for my FORD Fortran auto-documentation generator."
-category = "dev"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-markdown = "*"
-
-[[package]]
 name = "markupsafe"
 version = "2.0.1"
 description = "Safely add untrusted strings to HTML/XML markup."
@@ -1101,12 +1090,12 @@ social-auth-app-django = ">=4.0.0,<5.0.0"
 svgwrite = ">=1.4.1,<1.5.0"
 
 [package.extras]
-all = ["django-auth-ldap (>=3.0.0,<3.1.0)", "django-storages (>=1.12.3,<1.13.0)", "mysqlclient (>=2.0.3,<2.1.0)", "napalm (>=3.3.1,<4.0.0)", "social-auth-core[saml,openidconnect] (>=4.1.0,<4.2.0)"]
+all = ["django-auth-ldap (>=3.0.0,<3.1.0)", "django-storages (>=1.12.3,<1.13.0)", "mysqlclient (>=2.0.3,<2.1.0)", "napalm (>=3.3.1,<4.0.0)", "social-auth-core[openidconnect,saml] (>=4.1.0,<4.2.0)"]
 ldap = ["django-auth-ldap (>=3.0.0,<3.1.0)"]
 remote_storage = ["django-storages (>=1.12.3,<1.13.0)"]
 mysql = ["mysqlclient (>=2.0.3,<2.1.0)"]
 napalm = ["napalm (>=3.3.1,<4.0.0)"]
-sso = ["social-auth-core[saml,openidconnect] (>=4.1.0,<4.2.0)"]
+sso = ["social-auth-core[openidconnect,saml] (>=4.1.0,<4.2.0)"]
 
 [[package]]
 name = "nautobot-ssot"
@@ -1822,7 +1811,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6"
-content-hash = "32be37a8acd85107e454328751fc60ee5560f41092731bc83ac80a7c83157917"
+content-hash = "2a08e402f0dc5cb24612e3e2203f1042fba8702e50bd852894e5784ac26641b2"
 
 [metadata.files]
 amqp = [
@@ -2268,9 +2257,6 @@ lazy-object-proxy = [
 markdown = [
     {file = "Markdown-3.3.6-py3-none-any.whl", hash = "sha256:9923332318f843411e9932237530df53162e29dc7a4e2b91e35764583c46c9a3"},
     {file = "Markdown-3.3.6.tar.gz", hash = "sha256:76df8ae32294ec39dcf89340382882dfa12975f87f45c3ed1ecdb1e8cefc7006"},
-]
-markdown-include = [
-    {file = "markdown-include-0.6.0.tar.gz", hash = "sha256:6f5d680e36f7780c7f0f61dca53ca581bd50d1b56137ddcd6353efafa0c3e4a2"},
 ]
 markupsafe = [
     {file = "MarkupSafe-2.0.1-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:f9081981fe268bd86831e5c75f7de206ef275defcb82bc70740ae6dc507aee51"},

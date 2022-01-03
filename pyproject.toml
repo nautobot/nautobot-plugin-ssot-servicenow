@@ -39,7 +39,6 @@ pydocstyle = "*"
 flake8 = "*"
 coverage = "*"
 mkdocs = "*"
-markdown-include = "*"
 
 [tool.black]
 line-length = 120

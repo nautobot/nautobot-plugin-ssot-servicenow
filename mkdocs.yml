@@ -21,3 +21,4 @@ markdown_extensions:
       permalink: true
 nav:
   - Introduction: "index.md"
+  - Contributing: "contributing.md"

@@ -12,9 +12,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
+import sys
+import time
+
 from distutils.util import strtobool
 from invoke import Collection, task as invoke_task
-import os
 
 
 def is_truthy(arg):
@@ -196,9 +199,35 @@ def nbshell(context):
 
 
 @task
-def cli(context):
-    """Launch a bash shell inside the running Nautobot container."""
-    run_command(context, "bash")
+def cli(context, service="nautobot"):
+    """Launch a bash shell inside a running container."""
+    docker_compose(context, f"exec {service} bash", pty=True)
+
+
+@task
+def sql_import(context, filename="nautobot_backup.dump"):
+    """Import database data from an SQL dump.
+
+    Args:
+        context(obj): Used to run specific commands
+        filename (str): File to import from
+    """
+    if not os.path.isfile(filename):
+        sys.exit(f"No {filename} file found!")
+
+    docker_compose(context, "up -d postgres")
+    time.sleep(2)  # Wait for the database to be ready
+
+    print(f"Importing data from {filename}...")
+    context.run(
+        f"docker cp '{filename}' '{context.nautobot_ssot_servicenow.project_name}_postgres_1':/tmp/",
+        pty=True,
+    )
+    docker_compose(
+        context,
+        f'exec postgres sh -c "psql -U nautobot < /tmp/{filename}"',
+        pty=True,
+    )
 
 
 @task(

@@ -20,6 +20,8 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.6"
+nautobot = "^1.2.0"
+nautobot-ssot = "^1.0.1"
 Jinja2 = "<3"
 pysnow = "^0.7.17"
 PyYAML = "^5.4.1"
@@ -27,7 +29,7 @@ diffsync = "^1.3.0"
 
 [tool.poetry.dev-dependencies]
 invoke = "*"
-black = "*"
+black = {version = "*", python = "^3.6.2"}
 django-debug-toolbar = "*"
 yamllint = "*"
 bandit = "*"

@@ -1,5 +1,6 @@
 """Unit tests for the ServiceNowDiffSync adapter class."""
 
+from unittest import mock
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
@@ -13,6 +14,10 @@ from nautobot_ssot_servicenow.diffsync.adapter_servicenow import ServiceNowDiffS
 
 class MockServiceNowClient:
     """Mock version of the ServiceNowClient class using canned data."""
+
+    def get_by_sys_id(self, table, sys_id):  # pylint: disable=unused-argument,no-self-use
+        """Get a record with a given sys_id from a given table."""
+        return None
 
     def all_table_entries(self, table, query=None):  # pylint: disable=no-self-use
         """Iterator over all records in a given table."""
@@ -571,6 +576,10 @@ class MockServiceNowClient:
 class ServiceNowDiffSyncTestCase(TestCase):
     """Test the ServiceNowDiffSync adapter class."""
 
+    # Override the JOB_LOGS to None so that the Log Objects are created in the default database.
+    # This change is required as JOB_LOGS is a `fake` database pointed at the default. The django
+    # database cleanup will fail and cause tests to fail as this is not a real database.
+    @mock.patch("nautobot.extras.models.models.JOB_LOGS", None)
     def test_data_loading(self):
         """Test the load() function."""
         job = ServiceNowDataTarget()

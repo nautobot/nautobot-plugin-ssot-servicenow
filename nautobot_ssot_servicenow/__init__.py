@@ -22,15 +22,14 @@ class NautobotSSOTServiceNowConfig(PluginConfig):
     description = "Nautobot SSoT ServiceNow."
     base_url = "ssot-servicenow"
     required_settings = []
-    min_version = "1.0.3"
+    min_version = "1.2.0"
     max_version = "1.9999"
     default_settings = {}
-    required_settings = [
-        "instance",
-        "username",
-        "password",
-    ]
+    required_settings = []
     caching_config = {}
+
+    home_view_name = "plugins:nautobot_ssot:dashboard"  # a link to the ServiceNow job would be even better
+    config_view_name = "plugins:nautobot_ssot_servicenow:config"
 
 
 config = NautobotSSOTServiceNowConfig  # pylint:disable=invalid-name

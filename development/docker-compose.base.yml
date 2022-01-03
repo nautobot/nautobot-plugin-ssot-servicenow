@@ -30,3 +30,11 @@ services:
     healthcheck:
       disable: true
     <<: *nautobot-base
+  celery_worker:
+    entrypoint: "nautobot-server celery worker -l INFO"
+    depends_on:
+      - "nautobot"
+      - "redis"
+    healthcheck:
+      disable: true
+    <<: *nautobot-base

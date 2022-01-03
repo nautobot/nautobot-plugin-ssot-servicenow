@@ -38,7 +38,7 @@ namespace = Collection("nautobot_ssot_servicenow")
 namespace.configure(
     {
         "nautobot_ssot_servicenow": {
-            "nautobot_ver": "1.0.3",
+            "nautobot_ver": "1.2.1",
             "project_name": "nautobot-ssot-servicenow",
             "python_ver": "3.6",
             "local": False,
@@ -312,6 +312,13 @@ def bandit(context):
 
 
 @task
+def yamllint(context):
+    """Run yamllint to validate formatting adheres to NTC defined YAML standards."""
+    command = "yamllint . --format standard"
+    run_command(context, command)
+
+
+@task
 def check_migrations(context):
     """Check for missing migrations."""
     command = "nautobot-server --config=nautobot/core/tests/nautobot_config.py makemigrations --dry-run --check"
@@ -368,6 +375,8 @@ def tests(context, failfast=False):
     bandit(context)
     print("Running pydocstyle...")
     pydocstyle(context)
+    print("Running yamllint...")
+    yamllint(context)
     print("Running pylint...")
     pylint(context)
     print("Running unit tests...")

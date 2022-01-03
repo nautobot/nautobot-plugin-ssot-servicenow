@@ -1,11 +1,11 @@
 """ServiceNow Data Target Job."""
-from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static
 from django.urls import reverse
 
 from diffsync.enum import DiffSyncFlags
 
-from nautobot.dcim.models import Device, Interface, Region, Site
+from nautobot.dcim.models import Device, DeviceType, Interface, Manufacturer, Region, Site
 from nautobot.extras.jobs import Job, BooleanVar
 
 from nautobot_ssot.jobs.base import DataMapping, DataTarget
@@ -13,6 +13,7 @@ from nautobot_ssot.jobs.base import DataMapping, DataTarget
 from .diffsync.adapter_nautobot import NautobotDiffSync
 from .diffsync.adapter_servicenow import ServiceNowDiffSync
 from .servicenow import ServiceNowClient
+from .utils import get_servicenow_parameters
 
 
 class ServiceNowDataTarget(DataTarget, Job):
@@ -40,16 +41,18 @@ class ServiceNowDataTarget(DataTarget, Job):
     def data_mappings(cls):
         """List describing the data mappings involved in this DataTarget."""
         return (
+            DataMapping("Device", reverse("dcim:device_list"), "IP Switch", None),
+            DataMapping("Device Type", reverse("dcim:devicetype_list"), "Hardware Product Model", None),
+            DataMapping("Interface", reverse("dcim:interface_list"), "Interface", None),
+            DataMapping("Manufacturer", reverse("dcim:manufacturer_list"), "Company", None),
             DataMapping("Region", reverse("dcim:region_list"), "Location", None),
             DataMapping("Site", reverse("dcim:site_list"), "Location", None),
-            DataMapping("Device", reverse("dcim:device_list"), "IP Switch", None),
-            DataMapping("Interface", reverse("dcim:interface_list"), "Interface", None),
         )
 
     @classmethod
     def config_information(cls):
         """Dictionary describing the configuration of this DataTarget."""
-        configs = settings.PLUGINS_CONFIG.get("nautobot_ssot_servicenow", {})
+        configs = get_servicenow_parameters()
         return {
             "ServiceNow instance": configs.get("instance"),
             "Username": configs.get("username"),
@@ -58,13 +61,14 @@ class ServiceNowDataTarget(DataTarget, Job):
 
     def sync_data(self):
         """Sync a slew of Nautobot data into ServiceNow."""
-        configs = settings.PLUGINS_CONFIG.get("nautobot_ssot_servicenow", {})
+        configs = get_servicenow_parameters()
         snc = ServiceNowClient(
             instance=configs.get("instance"),
             username=configs.get("username"),
             password=configs.get("password"),
             worker=self,
         )
+
         self.log_info(message="Loading current data from ServiceNow...")
         servicenow_diffsync = ServiceNowDiffSync(client=snc, job=self, sync=self.sync)
         servicenow_diffsync.load()
@@ -91,27 +95,26 @@ class ServiceNowDataTarget(DataTarget, Job):
 
     def lookup_object(self, model_name, unique_id):
         """Look up a Nautobot object based on the DiffSync model name and unique ID."""
-        if model_name == "location":
-            try:
-                return Region.objects.get(name=unique_id)
-            except Region.DoesNotExist:
-                pass
-            try:
-                return Site.objects.get(name=unique_id)
-            except Site.DoesNotExist:
-                pass
-        elif model_name == "device":
-            try:
-                return Device.objects.get(name=unique_id)
-            except Device.DoesNotExist:
-                pass
-        elif model_name == "interface":
-            device_name, interface_name = unique_id.split("__")
-            try:
-                return Interface.objects.get(device__name=device_name, name=interface_name)
-            except Interface.DoesNotExist:
-                pass
-        return None
+        obj = None
+        try:
+            if model_name == "company":
+                obj = Manufacturer.objects.get(name=unique_id)
+            elif model_name == "device":
+                obj = Device.objects.get(name=unique_id)
+            elif model_name == "interface":
+                device_name, interface_name = unique_id.split("__")
+                obj = Interface.objects.get(device__name=device_name, name=interface_name)
+            elif model_name == "location":
+                try:
+                    obj = Site.objects.get(name=unique_id)
+                except Site.DoesNotExist:
+                    obj = Region.objects.get(name=unique_id)
+            elif model_name == "product_model":
+                manufacturer, model, _ = unique_id.split("__")
+                obj = DeviceType.objects.get(manufacturer__name=manufacturer, model=model)
+        except ObjectDoesNotExist:
+            pass
+        return obj
 
 
 jobs = [ServiceNowDataTarget]

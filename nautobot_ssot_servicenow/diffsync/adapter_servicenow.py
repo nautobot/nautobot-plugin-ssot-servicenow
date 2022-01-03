@@ -2,6 +2,7 @@
 import os
 
 from diffsync import DiffSync
+from diffsync.enum import DiffSyncFlags
 from diffsync.exceptions import ObjectAlreadyExists
 from jinja2 import Environment, FileSystemLoader
 import yaml
@@ -12,11 +13,14 @@ from . import models
 class ServiceNowDiffSync(DiffSync):
     """DiffSync adapter using pysnow to communicate with a ServiceNow server."""
 
+    company = models.Company
+    device = models.Device  # child of location
+    interface = models.Interface  # child of device
     location = models.Location
-    device = models.Device
-    interface = models.Interface
+    product_model = models.ProductModel  # child of company
 
     top_level = [
+        "company",
         "location",
     ]
 
@@ -68,7 +72,7 @@ class ServiceNowDiffSync(DiffSync):
             - parent (dict): Dict of {"modelname": ..., "field": ...} used to link table records back to their parents
         """
         model_cls = getattr(self, modelname)
-        self.job.log_debug(f"Loading table {table} into {modelname} instances...")
+        self.job.log_debug(f"Loading table `{table}` into {modelname} instances...")
 
         if "parent" not in kwargs:
             # Load the entire table
@@ -79,9 +83,10 @@ class ServiceNowDiffSync(DiffSync):
             # This is necessary because, for example, the cmdb_ci_network_adapter table contains network interfaces
             # for ALL types of devices (servers, switches, firewalls, etc.) but we only have switches as parent objects
             for parent in self.get_all(kwargs["parent"]["modelname"]):
-                self.job.log_debug(f"Loading children of {parent}")
                 for record in self.client.all_table_entries(table, {kwargs["parent"]["column"]: parent.sys_id}):
                     self.load_record(table, record, model_cls, mappings, **kwargs)
+
+        self.job.log_info(message=f"Loaded {len(self.get_all(modelname))} records from table `{table}`")
 
     def load_record(self, table, record, model_cls, mappings, **kwargs):
         """Helper method to load_table()."""
@@ -93,16 +98,16 @@ class ServiceNowDiffSync(DiffSync):
 
         try:
             self.add(model)
-            # self.job.log_debug(f"Loaded {modelname} {model.get_unique_id()}")
         except ObjectAlreadyExists:
             # TODO: the baseline data in ServiceNow has a number of duplicate Location entries. For now, continue
-            self.job.log_debug(f"Duplicate object encountered for {modelname} {model.get_unique_id()}")
+            self.job.log_debug(f'Duplicate object encountered for {modelname} "{model.get_unique_id()}"')
 
         if "parent" in kwargs:
             parent_uid = getattr(model, kwargs["parent"]["field"])
             if parent_uid is None:
-                self.job.log_debug(
-                    f"Model {modelname} {model.get_unique_id} does not have a parent uid value in field {kwargs['parent']['field']}"
+                self.job.log_warning(
+                    message=f'Model {modelname} "{model.get_unique_id}" does not have a parent uid value '
+                    f"in field {kwargs['parent']['field']}"
                 )
             else:
                 parent_model = self.get(kwargs["parent"]["modelname"], parent_uid)
@@ -121,7 +126,7 @@ class ServiceNowDiffSync(DiffSync):
                 if "key" in mapping["reference"]:
                     key = mapping["reference"]["key"]
                     if key not in record:
-                        self.job.log_debug(f"Key {key} is not present in record {record}")
+                        self.job.log_warning(message=f"Key `{key}` is not present in record `{record}`")
                     else:
                         sys_id = record[key]
                 else:
@@ -131,8 +136,9 @@ class ServiceNowDiffSync(DiffSync):
                     if sys_id not in self.sys_ids.get(table, {}):
                         referenced_record = self.client.get_by_sys_id(table, sys_id)
                         if referenced_record is None:
-                            self.job.log_debug(
-                                f"Record references sys_id {sys_id}, but that was not found in table {table}"
+                            self.job.log_warning(
+                                message=f"Record `{record.get('name', record)}` field `{mapping['field']}` "
+                                f"references sys_id `{sys_id}`, but that was not found in table `{table}`"
                             )
                         else:
                             self.sys_ids.setdefault(table, {})[sys_id] = referenced_record
@@ -145,3 +151,11 @@ class ServiceNowDiffSync(DiffSync):
             attrs[mapping["field"]] = value
 
         return attrs
+
+    def sync_complete(self, source, diff, flags=DiffSyncFlags.NONE, logger=None):
+        """Callback after the `sync_from` operation has completed and updated this instance.
+
+        Note that this callback is **only** triggered if the sync actually resulted in data changes.
+        If there are no detected changes, this callback will **not** be called.
+        """
+        source.tag_involved_objects(target=self)

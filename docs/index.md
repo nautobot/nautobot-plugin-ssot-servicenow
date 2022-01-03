@@ -4,8 +4,10 @@ A plugin for [Nautobot](https://github.com/nautobot/nautobot), building atop the
 
 ## Description
 
-This plugin provides the ability to synchronize data from Nautobot into ServiceNow. Currently the following data is mapped and synchronized:
+This plugin provides the ability to synchronize basic data from Nautobot into ServiceNow. Currently the following data is mapped and synchronized:
 
+- Nautobot Manufacturer table to ServiceNow Company table
+- Nautobot DeviceType table to ServiceNow Hardware Product Model table
 - Nautobot Region and Site tables to ServiceNow Location table
 - Nautobot Device table to ServiceNow IP Switch table
 - Nautobot Interface table to ServiceNow Interface table
@@ -15,14 +17,14 @@ This plugin provides the ability to synchronize data from Nautobot into ServiceN
 The plugin is available as a Python package in PyPI and can be installed with `pip` into an existing Nautobot installation:
 
 ```shell
-pip install nautobot-ssot nautobot-ssot-servicenow
+pip install nautobot-ssot-servicenow
 ```
 
-> The plugin is compatible with Nautobot 1.0.3 and higher
+> The plugin is compatible with Nautobot 1.2.0 and higher
 
 ## Configuration
 
-Once installed, the plugin needs to be enabled in your `nautobot_config.py`:
+Once installed, the plugin needs to be enabled in your `nautobot_config.py` and configured appropriately:
 
 ```python
 # nautobot_config.py
@@ -36,7 +38,7 @@ PLUGINS_CONFIG = {
         "hide_example_jobs": True,
     },
     "nautobot_ssot_servicenow": {
-        "instance": "dev12345",
+        "instance": os.getenv("SERVICENOW_INSTANCE"),
         "username": os.getenv("SERVICENOW_USERNAME"),
         "password": os.getenv("SERVICENOW_PASSWORD"),
     },
@@ -48,6 +50,10 @@ The plugin behavior can be controlled with the following list of settings:
 - `instance`: The ServiceNow instance to point to (as in `<instance>.servicenow.com`)
 - `username`: Username to access this instance
 - `password`: Password to access this instance
+
+There is also the option of omitting these settings from `PLUGINS_CONFIG` and instead defining them through the UI at `/plugins/ssot-servicenow/config/` (reachable by navigating to **Plugins > Installed Plugins** then clicking the "gear" icon next to the *Nautobot SSoT ServiceNow* entry) using Nautobot's standard UI and [secrets](https://nautobot.readthedocs.io/en/stable/core-functionality/secrets/) functionality.
+
+> If you configure the plugin's settings in `PLUGINS_CONFIG`, those values will take precedence over any configuration in the UI.
 
 ## Usage
 

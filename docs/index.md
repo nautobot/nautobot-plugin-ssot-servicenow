@@ -55,6 +55,8 @@ There is also the option of omitting these settings from `PLUGINS_CONFIG` and in
 
 > If you configure the plugin's settings in `PLUGINS_CONFIG`, those values will take precedence over any configuration in the UI.
 
+Depending on the amount of data involved, and the performance of your ServiceNow instance, you may need to increase the Nautobot job execution time limits ([`CELERY_TASK_SOFT_TIME_LIMIT`](https://nautobot.readthedocs.io/en/stable/configuration/optional-settings/#celery_task_soft_time_limit) and [`CELERY_TASK_TIME_LIMIT`](https://nautobot.readthedocs.io/en/stable/configuration/optional-settings/#celery_task_time_limit)) so that the job can execute to completion without timing out.
+
 ## Usage
 
 Once the plugin is installed and configured, from the Nautobot SSoT dashboard view (`/plugins/ssot/`), ServiceNow will be shown as a Data Target. You can click the **Sync** button to access a form view from which you can run the Nautobot-to-ServiceNow synchronization Job. Running the job will redirect you to a Nautobot **Job Result** view, from which you can access the **SSoT Sync Details** view to see detailed information about the outcome of the sync Job.

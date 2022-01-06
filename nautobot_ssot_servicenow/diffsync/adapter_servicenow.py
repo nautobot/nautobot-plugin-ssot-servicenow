@@ -1,4 +1,6 @@
 """DiffSync adapter for ServiceNow."""
+from base64 import b64encode
+import json
 import os
 
 from diffsync import DiffSync
@@ -34,6 +36,12 @@ class ServiceNowDiffSync(DiffSync):
         self.sync = sync
         self.sys_ids = {}
         self.mapping_data = []
+
+        # Since a device may contain dozens or hundreds of interfaces,
+        # to improve performance when a device is created/deleted, we use ServiceNow's bulk/batch API to
+        # create or delete all of these interfaces in a single API call.
+        self.interfaces_to_create_per_device = {}
+        self.interfaces_to_delete_per_device = {}
 
     def load(self):
         """Load data via pysnow."""
@@ -158,4 +166,60 @@ class ServiceNowDiffSync(DiffSync):
         Note that this callback is **only** triggered if the sync actually resulted in data changes.
         If there are no detected changes, this callback will **not** be called.
         """
+        self.job.log_info(message="Beginning potential bulk creation of device interfaces")
+        sn_resource = self.client.resource(api_path="/v1/batch")
+        sn_mapping_entry = None
+        for item in self.mapping_data:
+            if item["modelname"] == "interface":
+                sn_mapping_entry = item
+                break
+
+        assert sn_mapping_entry is not None
+
+        for request_id, device_name in enumerate(self.interfaces_to_create_per_device.keys()):
+            sn_data = {
+                "batch_request_id": str(request_id),
+                "rest_requests": [],
+            }
+            for interface_index, interface in enumerate(self.interfaces_to_create_per_device[device_name]):
+                request_payload = interface.map_data_to_sn_record(
+                    data=dict(**interface.get_identifiers(), **interface.get_attrs()),
+                    mapping_entry=sn_mapping_entry,
+                )
+                request_data = {
+                    "id": str(interface_index),
+                    "exclude_response_headers": True,
+                    "headers": [
+                        {"name": "Content-Type", "value": "application/json"},
+                        {"name": "Accept", "value": "application/json"},
+                    ],
+                    "url": f"/api/now/table/{sn_mapping_entry['table']}",
+                    "method": "POST",
+                    "body": b64encode(json.dumps(request_payload).encode("utf-8")).decode("utf-8"),
+                }
+                sn_data["rest_requests"].append(request_data)
+
+            if not sn_data["rest_requests"]:
+                self.job.log_info(message=f"No interfaces to create for {device_name}, continuing")
+                continue
+
+            self.job.log_info(
+                message=f"Sending bulk API request to ServiceNow:\n```\n{json.dumps(sn_data, indent=4)}\n```\n"
+            )
+
+            sn_response = sn_resource.request(
+                "POST",
+                headers={"Content-Type": "application/json", "Accept": "application/json"},
+                data=json.dumps(sn_data),
+            )
+
+            self.job.log_info(
+                message=f"ServiceNow response: {sn_response._response.status_code} "
+                f"\n```\n{sn_response._response.json()}\n```\n"
+            )
+
+        for device, interfaces in self.interfaces_to_delete_per_device.items():
+            # TODO need delete implementation
+            pass
+
         source.tag_involved_objects(target=self)

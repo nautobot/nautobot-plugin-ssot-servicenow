@@ -62,29 +62,36 @@ class NautobotDiffSync(DiffSync):
             self.add(location)
             self.load_regions(parent_location=location)
 
-    def load_sites(self):
+    def load_sites(self, single_site=None):
         """Add Nautobot Site objects as DiffSync Location models."""
-        for site_record in Site.objects.all():
-            # A Site and a Region may share the same name; if so they become part of the same Location record.
-            try:
-                location = self.get(self.location, site_record.name)
-                location.site_pk = site_record.pk
-            except ObjectNotFound:
-                location = self.location(
-                    diffsync=self,
-                    name=site_record.name,
-                    latitude=site_record.latitude or "",
-                    longitude=site_record.longitude or "",
-                    site_pk=site_record.pk,
-                )
-                self.add(location)
-            if site_record.region:
-                if location.name != site_record.region.name:
-                    region_location = self.get(self.location, site_record.region.name)
-                    region_location.contained_locations.append(location)
-                    location.parent_location_name = region_location.name
+        for location in self.get_all(self.location):
+            self.job.log_debug(f"Getting Sites associated with {location}")
+            for site_record in Site.objects.filter(region__name=location.name):
+                if single_site and site_record != single_site:
+                    self.job.log_debug(f"Skipping site {site_record}")
+                    continue
+                # A Site and a Region may share the same name; if so they become part of the same Location record.
+                try:
+                    region_location = self.get(self.location, site_record.name)
+                    region_location.site_pk = site_record.pk
+                except ObjectNotFound:
+                    site_location = self.location(
+                        diffsync=self,
+                        name=site_record.name,
+                        latitude=site_record.latitude or "",
+                        longitude=site_record.longitude or "",
+                        site_pk=site_record.pk,
+                    )
+                    self.add(site_location)
+                    if site_record.region:
+                        if site_record.name != site_record.region.name:
+                            region_location = self.get(self.location, site_record.region.name)
+                            region_location.contained_locations.append(location)
+                            location.parent_location_name = region_location.name
 
-        self.job.log_info(message=f"Loaded {len(self.get_all('location'))} site and region records from Nautobot.")
+        self.job.log_info(
+            message=f"Loaded {len(self.get_all('location'))} aggregated site and region records from Nautobot."
+        )
 
     def load_interface(self, interface_record, device_model):
         """Import a single Nautobot Interface object as a DiffSync Interface model."""
@@ -98,14 +105,19 @@ class NautobotDiffSync(DiffSync):
         self.add(interface)
         device_model.add_child(interface)
 
-    def load(self):
+    def load(self, region_filter=None, site_filter=None):
         """Load data from Nautobot."""
         self.load_manufacturers()
         # Import all Nautobot Region records as Locations
-        self.load_regions(parent_location=None)
+        if region_filter:
+            location = self.location(diffsync=self, name=region_filter.name, region_pk=region_filter.pk)
+            self.add(location)
+            self.load_regions(parent_location=location)
+        else:
+            self.load_regions()
 
         # Import all Nautobot Site records as Locations
-        self.load_sites()
+        self.load_sites(single_site=site_filter)
 
         for location in self.get_all(self.location):
             if location.site_pk is None:

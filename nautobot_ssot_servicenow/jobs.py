@@ -6,7 +6,7 @@ from django.urls import reverse
 from diffsync.enum import DiffSyncFlags
 
 from nautobot.dcim.models import Device, DeviceType, Interface, Manufacturer, Region, Site
-from nautobot.extras.jobs import Job, BooleanVar
+from nautobot.extras.jobs import Job, BooleanVar, ObjectVar
 
 from nautobot_ssot.jobs.base import DataMapping, DataTarget
 
@@ -24,9 +24,25 @@ class ServiceNowDataTarget(DataTarget, Job):
         default=False,
     )
 
-    delete_records = BooleanVar(
-        description="Delete records from ServiceNow if not present in Nautobot",
-        default=False,
+    # TODO: not yet implemented
+    # delete_records = BooleanVar(
+    #     description="Delete records from ServiceNow if not present in Nautobot",
+    #     default=False,
+    # )
+
+    region_filter = ObjectVar(
+        description="Only sync records belonging to a single Region.",
+        model=Region,
+        default=None,
+        required=True,
+    )
+
+    site_filter = ObjectVar(
+        description="Only sync records belonging to a single Site.",
+        model=Site,
+        query_params={"region_id": "$region_filter"},
+        default=None,
+        required=True,
     )
 
     class Meta:
@@ -75,12 +91,15 @@ class ServiceNowDataTarget(DataTarget, Job):
 
         self.log_info(message="Loading current data from Nautobot...")
         nautobot_diffsync = NautobotDiffSync(job=self, sync=self.sync)
-        nautobot_diffsync.load()
+        nautobot_diffsync.load(
+            region_filter=self.kwargs.get("region_filter"),
+            site_filter=self.kwargs.get("site_filter"),
+        )
 
         diffsync_flags = DiffSyncFlags.CONTINUE_ON_FAILURE
-        if self.kwargs["log_unchanged"]:
+        if self.kwargs.get("log_unchanged"):
             diffsync_flags |= DiffSyncFlags.LOG_UNCHANGED_RECORDS
-        if not self.kwargs["delete_records"]:
+        if not self.kwargs.get("delete_records"):
             diffsync_flags |= DiffSyncFlags.SKIP_UNMATCHED_DST
 
         self.log_info(message="Calculating diffs...")

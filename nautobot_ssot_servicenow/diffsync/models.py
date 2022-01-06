@@ -3,6 +3,7 @@ from typing import List, Optional, Union
 import uuid
 
 from diffsync import DiffSyncModel
+from diffsync.enum import DiffSyncStatus
 import pysnow
 
 
@@ -42,7 +43,7 @@ class ServiceNowCRUDMixin:
             else:
                 raise NotImplementedError
 
-        self.diffsync.job.log_debug(f"Mapped data {data} to record {record}")
+        # self.diffsync.job.log_debug(f"Mapped data {data} to record {record}")
         return record
 
     @classmethod
@@ -193,6 +194,18 @@ class Device(ServiceNowCRUDMixin, DiffSyncModel):
     sys_id: Optional[str] = None
     pk: Optional[uuid.UUID] = None
 
+    @classmethod
+    def create(cls, diffsync, ids, attrs):
+        """Create a new Device instance, and set things up for eventual bulk-creation of its child Interfaces."""
+        model = super().create(diffsync, ids=ids, attrs=attrs)
+
+        diffsync.job.log_debug(f"New Device {ids['name']} being created, will bulk-create its interfaces later")
+        diffsync.interfaces_to_create_per_device[ids["name"]] = []
+
+        return model
+
+    # TODO delete() method
+
 
 class Interface(ServiceNowCRUDMixin, DiffSyncModel):
     """ServiceNow Interface model."""
@@ -230,6 +243,28 @@ class Interface(ServiceNowCRUDMixin, DiffSyncModel):
 
     sys_id: Optional[str] = None
     pk: Optional[uuid.UUID] = None
+
+    @classmethod
+    def create(cls, diffsync, ids, attrs):
+        """Create an interface in isolation, or if the parent Device is new as well, defer for later bulk-creation."""
+        if ids["device_name"] in diffsync.interfaces_to_create_per_device:
+            diffsync.job.log_debug(
+                f"Parent device {ids['device_name']} was just created; deferring creation of interface {ids['name']}"
+            )
+            # copy-paste of DiffSyncModel's create() classmethod;
+            # we don't want to call super().create() here as that would be ServiceNowCRUDMixin.create(),
+            # which is what we're trying to avoid here!
+            model = cls(**ids, diffsync=diffsync, **attrs)
+            model.set_status(DiffSyncStatus.SUCCESS, "Deferred creation in ServiceNow")
+            diffsync.interfaces_to_create_per_device[ids["device_name"]].append(model)
+        else:
+            diffsync.job.log_debug(
+                f"Parent device {ids['device_name']} already exists, proceed with immediate creation of {ids['name']}"
+            )
+            model = super().create(diffsync, ids=ids, attrs=attrs)
+        return model
+
+    # TODO delete() method
 
 
 class IPAddress(ServiceNowCRUDMixin, DiffSyncModel):

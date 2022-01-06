@@ -68,7 +68,7 @@ class NautobotDiffSync(DiffSync):
             self.job.log_debug(f"Getting Sites associated with {location}")
             for site_record in Site.objects.filter(region__name=location.name):
                 if single_site and site_record != single_site:
-                    self.job.log_debug(f"Skipping site {site_record}")
+                    self.job.log_debug(f"Skipping site {site_record} due to site filter")
                     continue
                 # A Site and a Region may share the same name; if so they become part of the same Location record.
                 try:

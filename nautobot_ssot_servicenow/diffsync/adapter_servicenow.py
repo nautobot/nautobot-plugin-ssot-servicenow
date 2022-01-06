@@ -80,7 +80,7 @@ class ServiceNowDiffSync(DiffSync):
             - parent (dict): Dict of {"modelname": ..., "field": ...} used to link table records back to their parents
         """
         model_cls = getattr(self, modelname)
-        self.job.log_debug(f"Loading table `{table}` into {modelname} instances...")
+        self.job.log_info(message=f"Loading ServiceNow table `{table}` into {modelname} instances...")
 
         if "parent" not in kwargs:
             # Load the entire table
@@ -94,7 +94,9 @@ class ServiceNowDiffSync(DiffSync):
                 for record in self.client.all_table_entries(table, {kwargs["parent"]["column"]: parent.sys_id}):
                     self.load_record(table, record, model_cls, mappings, **kwargs)
 
-        self.job.log_info(message=f"Loaded {len(self.get_all(modelname))} records from table `{table}`")
+        self.job.log_info(
+            message=f"Loaded {len(self.get_all(modelname))} {modelname} records from ServiceNow table `{table}`."
+        )
 
     def load_record(self, table, record, model_cls, mappings, **kwargs):
         """Helper method to load_table()."""
@@ -107,8 +109,11 @@ class ServiceNowDiffSync(DiffSync):
         try:
             self.add(model)
         except ObjectAlreadyExists:
-            # TODO: the baseline data in ServiceNow has a number of duplicate Location entries. For now, continue
-            self.job.log_debug(f'Duplicate object encountered for {modelname} "{model.get_unique_id()}"')
+            # The baseline data in a standard ServiceNow developer instance has a number of duplicate Location entries.
+            # For now, ignore the duplicate entry and continue
+            self.job.log_warning(
+                message=f'Ignoring apparent duplicate record for {modelname} "{model.get_unique_id()}".'
+            )
 
         if "parent" in kwargs:
             parent_uid = getattr(model, kwargs["parent"]["field"])
@@ -160,13 +165,13 @@ class ServiceNowDiffSync(DiffSync):
 
         return attrs
 
-    def sync_complete(self, source, diff, flags=DiffSyncFlags.NONE, logger=None):
-        """Callback after the `sync_from` operation has completed and updated this instance.
+    def bulk_create_interfaces(self):
+        """Bulk-create interfaces for any newly created devices as a performance optimization."""
+        if not self.interfaces_to_create_per_device:
+            return
 
-        Note that this callback is **only** triggered if the sync actually resulted in data changes.
-        If there are no detected changes, this callback will **not** be called.
-        """
-        self.job.log_info(message="Beginning potential bulk creation of device interfaces")
+        self.job.log_info(message="Beginning bulk creation of interfaces in ServiceNow for newly added devices...")
+
         sn_resource = self.client.resource(api_path="/v1/batch")
         sn_mapping_entry = None
         for item in self.mapping_data:
@@ -176,18 +181,26 @@ class ServiceNowDiffSync(DiffSync):
 
         assert sn_mapping_entry is not None
 
+        # One batch API request per new device, consisting of requests to create each interface that the device has
         for request_id, device_name in enumerate(self.interfaces_to_create_per_device.keys()):
-            sn_data = {
+            device = self.job.lookup_object("device", device_name)
+            if not self.interfaces_to_create_per_device[device_name]:
+                self.job.log_info(obj=device, message="No interfaces to create for this device, continuing")
+                continue
+
+            request_data = {
                 "batch_request_id": str(request_id),
                 "rest_requests": [],
             }
-            for interface_index, interface in enumerate(self.interfaces_to_create_per_device[device_name]):
-                request_payload = interface.map_data_to_sn_record(
+
+            for inner_request_id, interface in enumerate(self.interfaces_to_create_per_device[device_name]):
+                inner_request_payload = interface.map_data_to_sn_record(
                     data=dict(**interface.get_identifiers(), **interface.get_attrs()),
                     mapping_entry=sn_mapping_entry,
                 )
-                request_data = {
-                    "id": str(interface_index),
+                inner_request_body = b64encode(json.dumps(inner_request_payload).encode("utf-8")).decode("utf-8")
+                inner_request_data = {
+                    "id": str(inner_request_id),
                     "exclude_response_headers": True,
                     "headers": [
                         {"name": "Content-Type", "value": "application/json"},
@@ -195,28 +208,52 @@ class ServiceNowDiffSync(DiffSync):
                     ],
                     "url": f"/api/now/table/{sn_mapping_entry['table']}",
                     "method": "POST",
-                    "body": b64encode(json.dumps(request_payload).encode("utf-8")).decode("utf-8"),
+                    "body": inner_request_body,
                 }
-                sn_data["rest_requests"].append(request_data)
+                request_data["rest_requests"].append(inner_request_data)
 
-            if not sn_data["rest_requests"]:
-                self.job.log_info(message=f"No interfaces to create for {device_name}, continuing")
-                continue
-
-            self.job.log_info(
-                message=f"Sending bulk API request to ServiceNow:\n```\n{json.dumps(sn_data, indent=4)}\n```\n"
+            self.job.log_debug(
+                f'Sending bulk API request to ServiceNow to create interfaces for device "{device_name}":'
+                f"\n```\n{json.dumps(request_data, indent=4)}\n```"
             )
 
             sn_response = sn_resource.request(
                 "POST",
                 headers={"Content-Type": "application/json", "Accept": "application/json"},
-                data=json.dumps(sn_data),
+                data=json.dumps(request_data),
             )
 
-            self.job.log_info(
-                message=f"ServiceNow response: {sn_response._response.status_code} "
-                f"\n```\n{sn_response._response.json()}\n```\n"
-            )
+            # Get the wrapped requests.Response object from the returned pysnow.Response object
+            response = sn_response._response  # pylint: disable=protected-access
+            response_data = response.json()
+
+            if response.status_code != 200:
+                self.job.log_failure(
+                    obj=device,
+                    message=f"Got status code {response.status_code} from ServiceNow when bulk-creating interfaces:"
+                    f"\n```\n{json.dumps(response_data, indent=4)}\n```",
+                )
+            elif response_data["unserviced_requests"]:
+                self.job.log_warning(
+                    obj=device,
+                    message="ServiceNow indicated that parts of the bulk request for interface creation "
+                    f"were not serviced:\n```\n{json.dumps(response_data['unserviced_requests'], indent=4)}\n```",
+                )
+            else:
+                self.job.log_debug(
+                    f"ServiceNow response: {response.status_code}\n```\n{json.dumps(response_data, indent=4)}\n```"
+                )
+                self.job.log_success(obj=device, message="Interfaces successfully bulk-created.")
+
+        self.job.log_info(message="Bulk creation of interfaces completed.")
+
+    def sync_complete(self, source, diff, flags=DiffSyncFlags.NONE, logger=None):
+        """Callback after the `sync_from` operation has completed and updated this instance.
+
+        Note that this callback is **only** triggered if the sync actually resulted in data changes.
+        If there are no detected changes, this callback will **not** be called.
+        """
+        self.bulk_create_interfaces()
 
         for device, interfaces in self.interfaces_to_delete_per_device.items():
             # TODO need delete implementation

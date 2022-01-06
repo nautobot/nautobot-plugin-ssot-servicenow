@@ -19,6 +19,8 @@ from .utils import get_servicenow_parameters
 class ServiceNowDataTarget(DataTarget, Job):
     """Job syncing data from Nautobot to ServiceNow."""
 
+    debug = BooleanVar(description="Enable for more verbose logging.")
+
     log_unchanged = BooleanVar(
         description="Create log entries even for unchanged objects",
         default=False,
@@ -111,6 +113,11 @@ class ServiceNowDataTarget(DataTarget, Job):
             self.log_info(message="Syncing from Nautobot to ServiceNow...")
             servicenow_diffsync.sync_from(nautobot_diffsync, flags=diffsync_flags)
             self.log_info(message="Sync complete")
+
+    def log_debug(self, message):
+        """Conditionally log a debug message."""
+        if self.kwargs["debug"]:
+            super().log_debug(message)
 
     def lookup_object(self, model_name, unique_id):
         """Look up a Nautobot object based on the DiffSync model name and unique ID."""

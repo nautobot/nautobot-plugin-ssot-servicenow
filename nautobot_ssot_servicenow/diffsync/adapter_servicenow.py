@@ -28,27 +28,56 @@ class ServiceNowDiffSync(DiffSync):
 
     DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data"))
 
-    def __init__(self, *args, client=None, job=None, sync=None, **kwargs):
+    def __init__(self, *args, client=None, job=None, sync=None, site_filter=None, **kwargs):
         """Initialize the ServiceNowDiffSync adapter."""
         super().__init__(*args, **kwargs)
         self.client = client
         self.job = job
         self.sync = sync
+        self.site_filter = site_filter
         self.sys_ids = {}
         self.mapping_data = []
 
         # Since a device may contain dozens or hundreds of interfaces,
-        # to improve performance when a device is created/deleted, we use ServiceNow's bulk/batch API to
-        # create or delete all of these interfaces in a single API call.
+        # to improve performance when a device is created, we use ServiceNow's bulk/batch API to
+        # create all of these interfaces in a single API call.
         self.interfaces_to_create_per_device = {}
-        self.interfaces_to_delete_per_device = {}
 
     def load(self):
         """Load data via pysnow."""
         self.mapping_data = self.load_yaml_datafile("mappings.yaml")
 
-        for entry in self.mapping_data:
-            self.load_table(**entry)
+        for modelname, entry in self.mapping_data.items():
+            if modelname == "location" and self.site_filter is not None:
+                # Load the specific record, if any, corresponding to the site_filter
+                record = (
+                    self.client.resource(api_path=f"/table/{entry['table']}")
+                    .get(query={"name": self.site_filter.name})
+                    .one_or_none()
+                )
+                if record:
+                    location = self.load_record(entry["table"], record, self.location, entry["mappings"])
+                    # Load all of its ancestors as well
+                    name_tokens = location.full_name.split("/")
+                    ancestor_full_name = ""
+                    for name_token in name_tokens[:-1]:
+                        if ancestor_full_name:
+                            ancestor_full_name += "/"
+                        ancestor_full_name += name_token
+                        record = (
+                            self.client.resource(api_path=f"/table/{entry['table']}")
+                            .get(query={"full_name": ancestor_full_name})
+                            .one_or_none()
+                        )
+                        if record:
+                            self.load_record(entry["table"], record, self.location, entry["mappings"])
+
+                self.job.log_info(
+                    message=f"Loaded a total of {len(self.get_all('location'))} location records from ServiceNow."
+                )
+
+            else:
+                self.load_table(modelname, **entry)
 
     @classmethod
     def load_yaml_datafile(cls, filename, config=None):
@@ -126,6 +155,8 @@ class ServiceNowDiffSync(DiffSync):
                 parent_model = self.get(kwargs["parent"]["modelname"], parent_uid)
                 parent_model.add_child(model)
 
+        return model
+
     def map_record_to_attrs(self, record, mappings):  # TODO pylint: disable=too-many-branches
         """Helper method to load_table()."""
         attrs = {"sys_id": record["sys_id"]}
@@ -173,13 +204,7 @@ class ServiceNowDiffSync(DiffSync):
         self.job.log_info(message="Beginning bulk creation of interfaces in ServiceNow for newly added devices...")
 
         sn_resource = self.client.resource(api_path="/v1/batch")
-        sn_mapping_entry = None
-        for item in self.mapping_data:
-            if item["modelname"] == "interface":
-                sn_mapping_entry = item
-                break
-
-        assert sn_mapping_entry is not None
+        sn_mapping_entry = self.mapping_data["interface"]
 
         # One batch API request per new device, consisting of requests to create each interface that the device has
         for request_id, device_name in enumerate(self.interfaces_to_create_per_device.keys()):
@@ -254,9 +279,5 @@ class ServiceNowDiffSync(DiffSync):
         If there are no detected changes, this callback will **not** be called.
         """
         self.bulk_create_interfaces()
-
-        for device, interfaces in self.interfaces_to_delete_per_device.items():
-            # TODO need delete implementation
-            pass
 
         source.tag_involved_objects(target=self)

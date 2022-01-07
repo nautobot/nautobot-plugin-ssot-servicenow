@@ -32,17 +32,9 @@ class ServiceNowDataTarget(DataTarget, Job):
     #     default=False,
     # )
 
-    region_filter = ObjectVar(
-        description="Only sync records belonging to a single Region.",
-        model=Region,
-        default=None,
-        required=True,
-    )
-
     site_filter = ObjectVar(
         description="Only sync records belonging to a single Site.",
         model=Site,
-        query_params={"region_id": "$region_filter"},
         default=None,
         required=True,
     )
@@ -88,15 +80,14 @@ class ServiceNowDataTarget(DataTarget, Job):
         )
 
         self.log_info(message="Loading current data from ServiceNow...")
-        servicenow_diffsync = ServiceNowDiffSync(client=snc, job=self, sync=self.sync)
+        servicenow_diffsync = ServiceNowDiffSync(
+            client=snc, job=self, sync=self.sync, site_filter=self.kwargs.get("site_filter")
+        )
         servicenow_diffsync.load()
 
         self.log_info(message="Loading current data from Nautobot...")
-        nautobot_diffsync = NautobotDiffSync(job=self, sync=self.sync)
-        nautobot_diffsync.load(
-            region_filter=self.kwargs.get("region_filter"),
-            site_filter=self.kwargs.get("site_filter"),
-        )
+        nautobot_diffsync = NautobotDiffSync(job=self, sync=self.sync, site_filter=self.kwargs.get("site_filter"))
+        nautobot_diffsync.load()
 
         diffsync_flags = DiffSyncFlags.CONTINUE_ON_FAILURE
         if self.kwargs.get("log_unchanged"):
@@ -116,7 +107,7 @@ class ServiceNowDataTarget(DataTarget, Job):
 
     def log_debug(self, message):
         """Conditionally log a debug message."""
-        if self.kwargs["debug"]:
+        if self.kwargs.get("debug"):
             super().log_debug(message)
 
     def lookup_object(self, model_name, unique_id):

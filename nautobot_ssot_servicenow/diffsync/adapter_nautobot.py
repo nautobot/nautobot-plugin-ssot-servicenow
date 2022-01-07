@@ -24,11 +24,12 @@ class NautobotDiffSync(DiffSync):
         "location",
     ]
 
-    def __init__(self, *args, job, sync, **kwargs):
+    def __init__(self, *args, job, sync, site_filter=None, **kwargs):
         """Initialize the NautobotDiffSync."""
         super().__init__(*args, **kwargs)
         self.job = job
         self.sync = sync
+        self.site_filter = site_filter
 
     def load_manufacturers(self):
         """Add Manufacturers and their descendant DeviceTypes as DiffSyncModel instances."""
@@ -53,21 +54,40 @@ class NautobotDiffSync(DiffSync):
 
     def load_regions(self, parent_location=None):
         """Recursively add Nautobot Region objects as DiffSync Location models."""
-        parent_pk = parent_location.region_pk if parent_location else None
-        for region_record in Region.objects.filter(parent=parent_pk):
-            location = self.location(diffsync=self, name=region_record.name, region_pk=region_record.pk)
-            if parent_location:
-                parent_location.contained_locations.append(location)
-                location.parent_location_name = parent_location.name
-            self.add(location)
-            self.load_regions(parent_location=location)
+        if self.site_filter is not None:
+            # Load only direct ancestors of the given Site
+            regions = []
+            ancestor = self.site_filter.region
+            while ancestor is not None:
+                regions.insert(0, ancestor)
+                ancestor = ancestor.parent
+        else:
+            parent_pk = parent_location.region_pk if parent_location else None
+            regions = Region.objects.filter(parent=parent_pk)
 
-    def load_sites(self, single_site=None):
+        for region_record in regions:
+            location = self.location(
+                diffsync=self,
+                name=region_record.name,
+                region_pk=region_record.pk,
+            )
+            if region_record.parent:
+                location.parent_location_name = region_record.parent.name
+                if not parent_location:
+                    parent_location = self.get(self.location, region_record.parent.name)
+                if parent_location:
+                    parent_location.contained_locations.append(location)
+            self.add(location)
+            if self.site_filter is None:
+                # Recursively load children of the given Region
+                self.load_regions(parent_location=location)
+
+    def load_sites(self):
         """Add Nautobot Site objects as DiffSync Location models."""
         for location in self.get_all(self.location):
             self.job.log_debug(f"Getting Sites associated with {location}")
             for site_record in Site.objects.filter(region__name=location.name):
-                if single_site and site_record != single_site:
+                if self.site_filter is not None and site_record != self.site_filter:
                     self.job.log_debug(f"Skipping site {site_record} due to site filter")
                     continue
                 # A Site and a Region may share the same name; if so they become part of the same Location record.
@@ -86,8 +106,8 @@ class NautobotDiffSync(DiffSync):
                     if site_record.region:
                         if site_record.name != site_record.region.name:
                             region_location = self.get(self.location, site_record.region.name)
-                            region_location.contained_locations.append(location)
-                            location.parent_location_name = region_location.name
+                            region_location.contained_locations.append(site_location)
+                        site_location.parent_location_name = site_record.region.name
 
         self.job.log_info(
             message=f"Loaded {len(self.get_all('location'))} aggregated site and region records from Nautobot."
@@ -105,19 +125,14 @@ class NautobotDiffSync(DiffSync):
         self.add(interface)
         device_model.add_child(interface)
 
-    def load(self, region_filter=None, site_filter=None):
+    def load(self):
         """Load data from Nautobot."""
         self.load_manufacturers()
         # Import all Nautobot Region records as Locations
-        if region_filter:
-            location = self.location(diffsync=self, name=region_filter.name, region_pk=region_filter.pk)
-            self.add(location)
-            self.load_regions(parent_location=location)
-        else:
-            self.load_regions()
+        self.load_regions()
 
         # Import all Nautobot Site records as Locations
-        self.load_sites(single_site=site_filter)
+        self.load_sites()
 
         for location in self.get_all(self.location):
             if location.site_pk is None:

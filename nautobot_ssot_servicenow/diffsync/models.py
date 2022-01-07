@@ -49,14 +49,7 @@ class ServiceNowCRUDMixin:
     @classmethod
     def create(cls, diffsync, ids, attrs):
         """Create a new instance, data-driven by mappings."""
-        entry = None
-        for item in diffsync.mapping_data:
-            if item["modelname"] == cls.get_type():
-                entry = item
-                break
-
-        if not entry:
-            raise RuntimeError(f"Did not find a mapping entry for {cls.get_type()}!")
+        entry = diffsync.mapping_data[cls.get_type()]
 
         model = super().create(diffsync, ids=ids, attrs=attrs)
 
@@ -68,14 +61,7 @@ class ServiceNowCRUDMixin:
 
     def update(self, attrs):
         """Update an existing instance, data-driven by mappings."""
-        entry = None
-        for item in self.diffsync.mapping_data:
-            if item["modelname"] == self.get_type():
-                entry = item
-                break
-
-        if not entry:
-            raise RuntimeError("Did not find a mapping entry for {self.get_type()}!")
+        entry = self.diffsync.mapping_data[self.get_type()]
 
         sn_resource = self.diffsync.client.resource(api_path=f"/table/{entry['table']}")
         query = self.map_data_to_sn_record(data=self.get_identifiers(), mapping_entry=entry)
@@ -157,6 +143,8 @@ class Location(ServiceNowCRUDMixin, DiffSyncModel):
     sys_id: Optional[str] = None
     region_pk: Optional[uuid.UUID] = None
     site_pk: Optional[uuid.UUID] = None
+
+    full_name: Optional[str] = None
 
 
 class Device(ServiceNowCRUDMixin, DiffSyncModel):

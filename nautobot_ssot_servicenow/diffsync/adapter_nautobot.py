@@ -1,10 +1,15 @@
 """DiffSync adapter class for Nautobot as source-of-truth."""
 
+import datetime
+
 from diffsync import DiffSync
 from diffsync.exceptions import ObjectNotFound
 
+from django.contrib.contenttypes.models import ContentType
+
 from nautobot.dcim.models import Device, DeviceType, Interface, Manufacturer, Region, Site
-from nautobot.extras.models import Tag
+from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.models import CustomField, Tag
 from nautobot.utilities.choices import ColorChoices
 
 from . import models
@@ -161,16 +166,27 @@ class NautobotDiffSync(DiffSync):
 
     def tag_involved_objects(self, target):
         """Tag all objects that were successfully synced to the target."""
-        # Delete any existing "ssot-synced-to-servicenow" tag so as to untag existing objects
-        if Tag.objects.filter(slug="ssot-synced-to-servicenow").exists():
-            Tag.objects.get(slug="ssot-synced-to-servicenow").delete()
-        # Ensure that "ssot-synced-to-servicenow" tag is created
-        tag = Tag.objects.create(
+        # The ssot-synced-to-servicenow tag *should* have been created automatically during plugin installation
+        # (see nautobot_ssot_servicenow/signals.py) but maybe a user deleted it inadvertently, so be safe:
+        tag, _ = Tag.objects.get_or_create(
             slug="ssot-synced-to-servicenow",
-            name="SSoT Synced to ServiceNow",
-            description="Object synced successfully from Nautobot to ServiceNow",
-            color=ColorChoices.COLOR_LIGHT_GREEN,
+            defaults={
+                "name": "SSoT Synced to ServiceNow",
+                "description": "Object synced at some point from Nautobot to ServiceNow",
+                "color": ColorChoices.COLOR_LIGHT_GREEN,
+            },
         )
+        # Ensure that the "ssot-synced-to-servicenow" custom field is present; as above, it *should* already exist.
+        custom_field, _ = CustomField.objects.get_or_create(
+            type=CustomFieldTypeChoices.TYPE_DATE,
+            name="ssot-synced-to-servicenow",
+            defaults={
+                "label": "Last synced to ServiceNow on",
+            },
+        )
+        for model in [Device, DeviceType, Interface, Manufacturer, Region, Site]:
+            custom_field.content_types.add(ContentType.objects.get_for_model(model))
+
         for modelname in [
             "company",
             "device",
@@ -186,21 +202,31 @@ class NautobotDiffSync(DiffSync):
                 except ObjectNotFound:
                     continue
 
-                self.tag_object(modelname, unique_id, tag)
+                self.tag_object(modelname, unique_id, tag, custom_field)
 
-    def tag_object(self, modelname, unique_id, tag):
-        """Apply the given tag to the identified object."""
+    def tag_object(self, modelname, unique_id, tag, custom_field):
+        """Apply the given tag and custom field to the identified object."""
         model_instance = self.get(modelname, unique_id)
+        today = datetime.date.today().isoformat()
+
+        def _tag_object(nautobot_object):
+            """Apply custom field and tag to object, if applicable."""
+            if hasattr(nautobot_object, "tags"):
+                nautobot_object.tags.add(tag)
+            if hasattr(nautobot_object, "cf"):
+                nautobot_object.cf[custom_field.name] = today
+            nautobot_object.validated_save()
+
         if modelname == "company":
-            # Manufacturers cannot be tagged
-            pass
+            _tag_object(Manufacturer.objects.get(pk=model_instance.pk))
         elif modelname == "device":
-            Device.objects.get(pk=model_instance.pk).tags.add(tag)
+            _tag_object(Device.objects.get(pk=model_instance.pk))
         elif modelname == "interface":
-            Interface.objects.get(pk=model_instance.pk).tags.add(tag)
+            _tag_object(Interface.objects.get(pk=model_instance.pk))
         elif modelname == "location":
-            # Regions cannot be tagged, but Sites can
+            if model_instance.region_pk is not None:
+                _tag_object(Region.objects.get(pk=model_instance.region_pk))
             if model_instance.site_pk is not None:
-                Site.objects.get(pk=model_instance.site_pk).tags.add(tag)
+                _tag_object(Site.objects.get(pk=model_instance.site_pk))
         elif modelname == "product_model":
-            DeviceType.objects.get(pk=model_instance.pk).tags.add(tag)
+            _tag_object(DeviceType.objects.get(pk=model_instance.pk))

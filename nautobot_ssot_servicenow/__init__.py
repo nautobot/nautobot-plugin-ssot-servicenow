@@ -9,7 +9,10 @@ except ImportError:
 __version__ = metadata.version(__name__)
 
 
+from nautobot.core.signals import nautobot_database_ready
 from nautobot.extras.plugins import PluginConfig
+
+from .signals import nautobot_database_ready_callback
 
 
 class NautobotSSOTServiceNowConfig(PluginConfig):
@@ -30,6 +33,11 @@ class NautobotSSOTServiceNowConfig(PluginConfig):
 
     home_view_name = "plugins:nautobot_ssot:dashboard"  # a link to the ServiceNow job would be even better
     config_view_name = "plugins:nautobot_ssot_servicenow:config"
+
+    def ready(self):
+        """Callback when this plugin is loaded."""
+        super().ready()
+        nautobot_database_ready.connect(nautobot_database_ready_callback, sender=self)
 
 
 config = NautobotSSOTServiceNowConfig  # pylint:disable=invalid-name

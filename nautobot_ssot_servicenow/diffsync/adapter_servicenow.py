@@ -57,7 +57,7 @@ class ServiceNowDiffSync(DiffSync):
                 )
                 if record:
                     location = self.load_record(entry["table"], record, self.location, entry["mappings"])
-                    # Load all of its ancestors as well
+                    # Load all of its ServiceNow ancestors as well
                     name_tokens = location.full_name.split("/")
                     ancestor_full_name = ""
                     for name_token in name_tokens[:-1]:
@@ -71,6 +71,20 @@ class ServiceNowDiffSync(DiffSync):
                         )
                         if record:
                             self.load_record(entry["table"], record, self.location, entry["mappings"])
+                # Load all Nautobot ancestor records as well
+                # This is so in case the Nautobot ancestors exist in ServiceNow but aren't linked to the record,
+                # we link them together instead of creating new, redundant ancestor records in ServiceNow.
+                ancestor = self.site_filter.region
+                while ancestor is not None:
+                    if not self.get(self.location, ancestor.name):
+                        record = (
+                            self.client.resource(api_path=f"/table/{entry['table']}")
+                            .get(query={"name": ancestor.name})
+                            .one_or_none()
+                        )
+                        if record:
+                            location = self.load_record(entry["table"], record, self.location, entry["mappings"])
+                    ancestor = ancestor.parent
 
                 self.job.log_info(
                     message=f"Loaded a total of {len(self.get_all('location'))} location records from ServiceNow."

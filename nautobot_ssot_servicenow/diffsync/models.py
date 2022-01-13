@@ -3,6 +3,7 @@ from typing import List, Optional, Union
 import uuid
 
 from diffsync import DiffSyncModel
+from diffsync.enum import DiffSyncStatus
 import pysnow
 
 
@@ -48,14 +49,7 @@ class ServiceNowCRUDMixin:
     @classmethod
     def create(cls, diffsync, ids, attrs):
         """Create a new instance, data-driven by mappings."""
-        entry = None
-        for item in diffsync.mapping_data:
-            if item["modelname"] == cls.get_type():
-                entry = item
-                break
-
-        if not entry:
-            raise RuntimeError(f"Did not find a mapping entry for {cls.get_type()}!")
+        entry = diffsync.mapping_data[cls.get_type()]
 
         model = super().create(diffsync, ids=ids, attrs=attrs)
 
@@ -67,14 +61,7 @@ class ServiceNowCRUDMixin:
 
     def update(self, attrs):
         """Update an existing instance, data-driven by mappings."""
-        entry = None
-        for item in self.diffsync.mapping_data:
-            if item["modelname"] == self.get_type():
-                entry = item
-                break
-
-        if not entry:
-            raise RuntimeError("Did not find a mapping entry for {self.get_type()}!")
+        entry = self.diffsync.mapping_data[self.get_type()]
 
         sn_resource = self.diffsync.client.resource(api_path=f"/table/{entry['table']}")
         query = self.map_data_to_sn_record(data=self.get_identifiers(), mapping_entry=entry)
@@ -82,7 +69,8 @@ class ServiceNowCRUDMixin:
             record = sn_resource.get(query=query).one()
         except pysnow.exceptions.MultipleResults:
             self.diffsync.job.log_failure(
-                message=f"Unsure which record to update, as query {query} matched more than one item in table {entry['table']}"
+                message=f"Unsure which record to update, as query {query} matched more than one item "
+                f"in table {entry['table']}"
             )
             return None
 
@@ -156,6 +144,8 @@ class Location(ServiceNowCRUDMixin, DiffSyncModel):
     region_pk: Optional[uuid.UUID] = None
     site_pk: Optional[uuid.UUID] = None
 
+    full_name: Optional[str] = None
+
 
 class Device(ServiceNowCRUDMixin, DiffSyncModel):
     """ServiceNow Device model."""
@@ -192,6 +182,18 @@ class Device(ServiceNowCRUDMixin, DiffSyncModel):
 
     sys_id: Optional[str] = None
     pk: Optional[uuid.UUID] = None
+
+    @classmethod
+    def create(cls, diffsync, ids, attrs):
+        """Create a new Device instance, and set things up for eventual bulk-creation of its child Interfaces."""
+        model = super().create(diffsync, ids=ids, attrs=attrs)
+
+        diffsync.job.log_debug(f'New Device "{ids["name"]}" is being created, will bulk-create its interfaces later.')
+        diffsync.interfaces_to_create_per_device[ids["name"]] = []
+
+        return model
+
+    # TODO delete() method
 
 
 class Interface(ServiceNowCRUDMixin, DiffSyncModel):
@@ -230,6 +232,25 @@ class Interface(ServiceNowCRUDMixin, DiffSyncModel):
 
     sys_id: Optional[str] = None
     pk: Optional[uuid.UUID] = None
+
+    @classmethod
+    def create(cls, diffsync, ids, attrs):
+        """Create an interface in isolation, or if the parent Device is new as well, defer for later bulk-creation."""
+        if ids["device_name"] in diffsync.interfaces_to_create_per_device:
+            diffsync.job.log_debug(
+                f'Device "{ids["device_name"]}" was just created; deferring creation of interface "{ids["name"]}"'
+            )
+            # copy-paste of DiffSyncModel's create() classmethod;
+            # we don't want to call super().create() here as that would be ServiceNowCRUDMixin.create(),
+            # which is what we're trying to avoid here!
+            model = cls(**ids, diffsync=diffsync, **attrs)
+            model.set_status(DiffSyncStatus.SUCCESS, "Deferred creation in ServiceNow")
+            diffsync.interfaces_to_create_per_device[ids["device_name"]].append(model)
+        else:
+            model = super().create(diffsync, ids=ids, attrs=attrs)
+        return model
+
+    # TODO delete() method
 
 
 class IPAddress(ServiceNowCRUDMixin, DiffSyncModel):

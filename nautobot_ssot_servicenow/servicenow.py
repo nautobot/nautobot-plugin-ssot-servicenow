@@ -2,6 +2,7 @@
 import logging
 
 from pysnow import Client
+from pysnow.exceptions import MultipleResults
 import requests
 
 
@@ -41,7 +42,10 @@ class ServiceNowClient(Client):
         except requests.exceptions.HTTPError as exc:
             # Raised if for example we get a 400 response because we're querying a nonexistent table
             logger.error("HTTP error encountered: %s", exc)
-            result = None
+            return None
+        except MultipleResults:
+            logger.error('Multiple results unexpectedly returned when querying table "%s" with "%s"', table, query)
+            return None
 
         if not result:
             logger.warning("Query %s did not match an object in table %s", query, table)

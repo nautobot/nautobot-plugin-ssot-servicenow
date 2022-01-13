@@ -12,7 +12,7 @@ This plugin provides the ability to synchronize basic data from Nautobot into Se
 
 For more information about general usage of the Nautobot SSoT plugin, refer to [its documentation](https://nautobot-plugin-ssot.readthedocs.io/).
 
-## Installation
+## Installation and Configuration
 
 The plugin is available as a Python package in PyPI and can be installed with `pip` into an existing Nautobot installation:
 
@@ -52,6 +52,8 @@ The plugin behavior can be controlled with the following list of settings:
 There is also the option of omitting these settings from `PLUGINS_CONFIG` and instead defining them through the UI at `/plugins/ssot-servicenow/config/` (reachable by navigating to **Plugins > Installed Plugins** then clicking the "gear" icon next to the *Nautobot SSoT ServiceNow* entry) using Nautobot's standard UI and [secrets](https://nautobot.readthedocs.io/en/stable/core-functionality/secrets/) functionality.
 
 > If you configure the plugin's settings in `PLUGINS_CONFIG`, those values will take precedence over any configuration in the UI.
+
+Depending on the amount of data involved, and the performance of your ServiceNow instance, you may need to increase the Nautobot job execution time limits ([`CELERY_TASK_SOFT_TIME_LIMIT`](https://nautobot.readthedocs.io/en/stable/configuration/optional-settings/#celery_task_soft_time_limit) and [`CELERY_TASK_TIME_LIMIT`](https://nautobot.readthedocs.io/en/stable/configuration/optional-settings/#celery_task_time_limit)) so that the job can execute to completion without timing out.
 
 ## Questions
 

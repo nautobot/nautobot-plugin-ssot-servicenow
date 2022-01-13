@@ -1,13 +1,16 @@
 ---
-- table: "core_company"
-  modelname: "company"
+company:
+  table: "core_company"
+  # Only load companies that are flagged as manufacturer: true, as those correspond to Nautobot Manufacturer records
+  table_query:
+    manufacturer: true
   mappings:
     - field: "name"
       column: "name"
     - field: "manufacturer"
       column: "manufacturer"
-- table: "cmdb_hardware_product_model"
-  modelname: "product_model"
+product_model:
+  table: "cmdb_hardware_product_model"
   parent:
     modelname: "company"
     field: "manufacturer_name"
@@ -22,8 +25,8 @@
       column: "name"
     - field: "model_number"
       column: "model_number"
-- table: "cmn_location"
-  modelname: "location"
+location:
+  table: "cmn_location"
   mappings:
     - field: "name"
       column: "name"
@@ -32,12 +35,14 @@
         key: "parent"
         table: "cmn_location"
         column: "name"
+    - field: "full_name"
+      column: "full_name"
     - field: "latitude"
       column: "latitude"
     - field: "longitude"
       column: "longitude"
-- table: "cmdb_ci_ip_switch"
-  modelname: "device"
+device:
+  table: "cmdb_ci_ip_switch"
   parent:
     modelname: "location"
     field: "location_name"
@@ -64,8 +69,8 @@
         column: "name"
     - field: "serial"
       column: "serial_number"
-- table: "cmdb_ci_network_adapter"
-  modelname: "interface"
+interface:
+  table: "cmdb_ci_network_adapter"
   parent:
     modelname: "device"
     field: "device_name"

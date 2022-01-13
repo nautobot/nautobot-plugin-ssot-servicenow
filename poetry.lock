@@ -371,6 +371,14 @@ argon2 = ["argon2-cffi (>=16.1.0)"]
 bcrypt = ["bcrypt"]
 
 [[package]]
+name = "django-ajax-tables"
+version = "1.1.1"
+description = "Django tag for ajax-enabled tables"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "django-appconf"
 version = "1.0.5"
 description = "A helper class for handling configuration defaults of packaged apps gracefully."
@@ -1043,7 +1051,7 @@ python-versions = "*"
 
 [[package]]
 name = "nautobot"
-version = "1.2.1"
+version = "1.2.2"
 description = "Source of truth and network automation platform."
 category = "main"
 optional = false
@@ -1052,6 +1060,7 @@ python-versions = ">=3.6,<4.0"
 [package.dependencies]
 celery = ">=5.1.0,<5.2.0"
 Django = ">=3.1.12,<3.2.0"
+django-ajax-tables = ">=1.1.1,<1.2.0"
 django-cacheops = ">=5.1,<5.2"
 django-celery-beat = ">=2.2.0,<3.0.0"
 django-constance = {version = ">=2.8.0,<2.9.0", extras = ["database"]}
@@ -1090,12 +1099,12 @@ social-auth-app-django = ">=4.0.0,<5.0.0"
 svgwrite = ">=1.4.1,<1.5.0"
 
 [package.extras]
-all = ["django-auth-ldap (>=3.0.0,<3.1.0)", "django-storages (>=1.12.3,<1.13.0)", "mysqlclient (>=2.0.3,<2.1.0)", "napalm (>=3.3.1,<4.0.0)", "social-auth-core[openidconnect,saml] (>=4.1.0,<4.2.0)"]
+all = ["django-auth-ldap (>=3.0.0,<3.1.0)", "django-storages (>=1.12.3,<1.13.0)", "mysqlclient (>=2.0.3,<2.1.0)", "napalm (>=3.3.1,<4.0.0)", "social-auth-core[saml,openidconnect] (>=4.1.0,<4.2.0)"]
 ldap = ["django-auth-ldap (>=3.0.0,<3.1.0)"]
 remote_storage = ["django-storages (>=1.12.3,<1.13.0)"]
 mysql = ["mysqlclient (>=2.0.3,<2.1.0)"]
 napalm = ["napalm (>=3.3.1,<4.0.0)"]
-sso = ["social-auth-core[openidconnect,saml] (>=4.1.0,<4.2.0)"]
+sso = ["social-auth-core[saml,openidconnect] (>=4.1.0,<4.2.0)"]
 
 [[package]]
 name = "nautobot-ssot"
@@ -2041,6 +2050,10 @@ django = [
     {file = "Django-3.1.12-py3-none-any.whl", hash = "sha256:a523d62b7ab2908f551dabc32b99017a86aa7784e32b761708e52be3dce6d35d"},
     {file = "Django-3.1.12.tar.gz", hash = "sha256:dc41bf07357f1f4810c1c555b685cb51f780b41e37892d6cc92b89789f2847e1"},
 ]
+django-ajax-tables = [
+    {file = "django_ajax_tables-1.1.1-py3-none-any.whl", hash = "sha256:62e0138949153c0a994eefbf469f5496b1ad98bc073e170bc021a1aada7a32d0"},
+    {file = "django_ajax_tables-1.1.1.tar.gz", hash = "sha256:5a7e7bc7940aa6332a564916cde22010a858a3d29fc1090ce8061010ec76337c"},
+]
 django-appconf = [
     {file = "django-appconf-1.0.5.tar.gz", hash = "sha256:be3db0be6c81fa84742000b89a81c016d70ae66a7ccb620cdef592b1f1a6aaa4"},
     {file = "django_appconf-1.0.5-py3-none-any.whl", hash = "sha256:ae9f864ee1958c815a965ed63b3fba4874eec13de10236ba063a788f9a17389d"},
@@ -2311,8 +2324,8 @@ mypy-extensions = [
     {file = "mypy_extensions-0.4.3.tar.gz", hash = "sha256:2d82818f5bb3e369420cb3c4060a7970edba416647068eb4c5343488a6c604a8"},
 ]
 nautobot = [
-    {file = "nautobot-1.2.1-py3-none-any.whl", hash = "sha256:1ef2501c9b2042be4192b3ec1910c56b7dd17cccd08ebb36fb295bb6c744d09e"},
-    {file = "nautobot-1.2.1.tar.gz", hash = "sha256:3cd6b15c73b7fd408dafc6704027a329699365c232c5c33e19de9d2a6384890d"},
+    {file = "nautobot-1.2.2-py3-none-any.whl", hash = "sha256:10d4eb9209ebc6eb577a405356a627607606dcb7fcb81d13d049aa5f2236948f"},
+    {file = "nautobot-1.2.2.tar.gz", hash = "sha256:86678a125dfb1afb8f2b3740d94f7f09cc54e67c98aab83fc82deaad4376bafe"},
 ]
 nautobot-ssot = [
     {file = "nautobot-ssot-1.0.1.tar.gz", hash = "sha256:21de4cf3fda47054a1d59672e43314bcd1a9fb736c35c1ca4dddc53e4f1ebbca"},

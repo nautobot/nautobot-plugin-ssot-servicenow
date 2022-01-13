@@ -6,7 +6,7 @@ from django.urls import reverse
 from diffsync.enum import DiffSyncFlags
 
 from nautobot.dcim.models import Device, DeviceType, Interface, Manufacturer, Region, Site
-from nautobot.extras.jobs import Job, BooleanVar
+from nautobot.extras.jobs import Job, BooleanVar, ObjectVar
 
 from nautobot_ssot.jobs.base import DataMapping, DataTarget
 
@@ -19,14 +19,24 @@ from .utils import get_servicenow_parameters
 class ServiceNowDataTarget(DataTarget, Job):
     """Job syncing data from Nautobot to ServiceNow."""
 
+    debug = BooleanVar(description="Enable for more verbose logging.")
+
     log_unchanged = BooleanVar(
         description="Create log entries even for unchanged objects",
         default=False,
     )
 
-    delete_records = BooleanVar(
-        description="Delete records from ServiceNow if not present in Nautobot",
-        default=False,
+    # TODO: not yet implemented
+    # delete_records = BooleanVar(
+    #     description="Delete records from ServiceNow if not present in Nautobot",
+    #     default=False,
+    # )
+
+    site_filter = ObjectVar(
+        description="Only sync records belonging to a single Site.",
+        model=Site,
+        default=None,
+        required=True,
     )
 
     class Meta:
@@ -70,17 +80,19 @@ class ServiceNowDataTarget(DataTarget, Job):
         )
 
         self.log_info(message="Loading current data from ServiceNow...")
-        servicenow_diffsync = ServiceNowDiffSync(client=snc, job=self, sync=self.sync)
+        servicenow_diffsync = ServiceNowDiffSync(
+            client=snc, job=self, sync=self.sync, site_filter=self.kwargs.get("site_filter")
+        )
         servicenow_diffsync.load()
 
         self.log_info(message="Loading current data from Nautobot...")
-        nautobot_diffsync = NautobotDiffSync(job=self, sync=self.sync)
+        nautobot_diffsync = NautobotDiffSync(job=self, sync=self.sync, site_filter=self.kwargs.get("site_filter"))
         nautobot_diffsync.load()
 
         diffsync_flags = DiffSyncFlags.CONTINUE_ON_FAILURE
-        if self.kwargs["log_unchanged"]:
+        if self.kwargs.get("log_unchanged"):
             diffsync_flags |= DiffSyncFlags.LOG_UNCHANGED_RECORDS
-        if not self.kwargs["delete_records"]:
+        if not self.kwargs.get("delete_records"):
             diffsync_flags |= DiffSyncFlags.SKIP_UNMATCHED_DST
 
         self.log_info(message="Calculating diffs...")
@@ -92,6 +104,11 @@ class ServiceNowDataTarget(DataTarget, Job):
             self.log_info(message="Syncing from Nautobot to ServiceNow...")
             servicenow_diffsync.sync_from(nautobot_diffsync, flags=diffsync_flags)
             self.log_info(message="Sync complete")
+
+    def log_debug(self, message):
+        """Conditionally log a debug message."""
+        if self.kwargs.get("debug"):
+            super().log_debug(message)
 
     def lookup_object(self, model_name, unique_id):
         """Look up a Nautobot object based on the DiffSync model name and unique ID."""

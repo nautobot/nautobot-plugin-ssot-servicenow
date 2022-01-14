@@ -1,13 +1,17 @@
 """DiffSyncModel subclasses for Nautobot-to-ServiceNow data sync."""
-from typing import List, Optional
+from typing import List, Optional, Union
 import uuid
 
 from diffsync import DiffSyncModel
+from diffsync.enum import DiffSyncStatus
 import pysnow
 
 
 class ServiceNowCRUDMixin:
     """Mixin class for all ServiceNow models, to support CRUD operations based on mappings.yaml."""
+
+    _sys_id_cache = {}
+    """Dict of table -> column_name -> value -> sys_id."""
 
     def map_data_to_sn_record(self, data, mapping_entry, existing_record=None):
         """Map create/update data from DiffSync to a corresponding ServiceNow data record."""
@@ -20,34 +24,32 @@ class ServiceNowCRUDMixin:
                 record[mapping["column"]] = value
             elif "reference" in mapping:
                 tablename = mapping["reference"]["table"]
-                target = None
-                if "column" in mapping["reference"]:
-                    if value is not None:
+                sys_id = None
+                if "column" not in mapping["reference"]:
+                    raise NotImplementedError
+                column_name = mapping["reference"]["column"]
+                if value is not None:
+                    # Look in the cache first
+                    sys_id = self._sys_id_cache.get(tablename, {}).get(column_name, {}).get(value, None)
+                    if not sys_id:
                         target = self.diffsync.client.get_by_query(tablename, {mapping["reference"]["column"]: value})
                         if target is None:
-                            self.diffsync.worker.job_log(f"Unable to find reference target in {tablename}")
-                else:
-                    raise NotImplementedError
+                            self.diffsync.job.log_warning(message=f"Unable to find reference target in {tablename}")
+                        else:
+                            sys_id = target["sys_id"]
+                            self._sys_id_cache.setdefault(tablename, {}).setdefault(column_name, {})[value] = sys_id
 
-                sys_id = target["sys_id"] if target else None
                 record[mapping["reference"]["key"]] = sys_id
             else:
                 raise NotImplementedError
 
-        self.diffsync.worker.job_log(f"Mapped data {data} to record {record}")
+        self.diffsync.job.log_debug(f"Mapped data {data} to record {record}")
         return record
 
     @classmethod
     def create(cls, diffsync, ids, attrs):
         """Create a new instance, data-driven by mappings."""
-        entry = None
-        for item in diffsync.mapping_data:
-            if item["modelname"] == cls.get_type():
-                entry = item
-                break
-
-        if not entry:
-            raise RuntimeError(f"Did not find a mapping entry for {cls.get_type()}!")
+        entry = diffsync.mapping_data[cls.get_type()]
 
         model = super().create(diffsync, ids=ids, attrs=attrs)
 
@@ -59,22 +61,16 @@ class ServiceNowCRUDMixin:
 
     def update(self, attrs):
         """Update an existing instance, data-driven by mappings."""
-        entry = None
-        for item in self.diffsync.mapping_data:
-            if item["modelname"] == self.get_type():
-                entry = item
-                break
-
-        if not entry:
-            raise RuntimeError("Did not find a mapping entry for {self.get_type()}!")
+        entry = self.diffsync.mapping_data[self.get_type()]
 
         sn_resource = self.diffsync.client.resource(api_path=f"/table/{entry['table']}")
         query = self.map_data_to_sn_record(data=self.get_identifiers(), mapping_entry=entry)
         try:
             record = sn_resource.get(query=query).one()
         except pysnow.exceptions.MultipleResults:
-            self.diffsync.worker.job_log(
-                f"Unsure which record to update, as query {query} matched more than one item in table {entry['table']}"
+            self.diffsync.job.log_failure(
+                message=f"Unsure which record to update, as query {query} matched more than one item "
+                f"in table {entry['table']}"
             )
             return None
 
@@ -86,12 +82,51 @@ class ServiceNowCRUDMixin:
 
     # TODO delete() method
 
+
+class Company(ServiceNowCRUDMixin, DiffSyncModel):
+    """ServiceNow Company model."""
+
+    _modelname = "company"
+    _identifiers = ("name",)
+    _attributes = ("manufacturer",)
+    _children = {
+        "product_model": "product_models",
+    }
+
+    name: str
+    manufacturer: bool = False
+
+    product_models: List["ProductModel"] = list()
+
+    sys_id: Optional[str] = None
+    pk: Optional[uuid.UUID] = None
+
+
+class ProductModel(ServiceNowCRUDMixin, DiffSyncModel):
+    """ServiceNow Hardware Product Model model."""
+
+    _modelname = "product_model"
+    _identifiers = ("manufacturer_name", "model_name", "model_number")
+
+    manufacturer_name: Optional[str]  # some ServiceNow products have no associated manufacturer?
+    # Nautobot has only one combined "model" field, but ServiceNow has both name and number
+    model_name: str
+    model_number: str
+
+    sys_id: Optional[str] = None
+    pk: Optional[uuid.UUID] = None
+
+
 class Location(ServiceNowCRUDMixin, DiffSyncModel):
     """ServiceNow Location model."""
 
     _modelname = "location"
     _identifiers = ("name",)
-    _attributes = ("parent_location_name",)
+    _attributes = (
+        "parent_location_name",
+        "latitude",
+        "longitude",
+    )
     _children = {
         "device": "devices",
     }
@@ -100,11 +135,16 @@ class Location(ServiceNowCRUDMixin, DiffSyncModel):
 
     parent_location_name: Optional[str]
     contained_locations: List["Location"] = list()
+    latitude: Union[float, str] = ""  # can't use Optional[float] because an empty string doesn't map to None
+    longitude: Union[float, str] = ""
 
     devices: List["Device"] = list()
 
     sys_id: Optional[str] = None
-    pk: Optional[uuid.UUID] = None
+    region_pk: Optional[uuid.UUID] = None
+    site_pk: Optional[uuid.UUID] = None
+
+    full_name: Optional[str] = None
 
 
 class Device(ServiceNowCRUDMixin, DiffSyncModel):
@@ -117,6 +157,10 @@ class Device(ServiceNowCRUDMixin, DiffSyncModel):
     # ...as we would need to sync these data models to ServiceNow as well, and we don't do that yet.
     _attributes = (
         "location_name",
+        "asset_tag",
+        "manufacturer_name",
+        "model_name",
+        "serial",
     )
     _children = {
         "interface": "interfaces",
@@ -125,7 +169,11 @@ class Device(ServiceNowCRUDMixin, DiffSyncModel):
     name: str
 
     location_name: Optional[str]
-    model: Optional[str]
+    asset_tag: Optional[str]
+    manufacturer_name: Optional[str]
+    model_name: Optional[str]
+    serial: Optional[str]
+
     platform: Optional[str]
     role: Optional[str]
     vendor: Optional[str]
@@ -134,6 +182,18 @@ class Device(ServiceNowCRUDMixin, DiffSyncModel):
 
     sys_id: Optional[str] = None
     pk: Optional[uuid.UUID] = None
+
+    @classmethod
+    def create(cls, diffsync, ids, attrs):
+        """Create a new Device instance, and set things up for eventual bulk-creation of its child Interfaces."""
+        model = super().create(diffsync, ids=ids, attrs=attrs)
+
+        diffsync.job.log_debug(f'New Device "{ids["name"]}" is being created, will bulk-create its interfaces later.')
+        diffsync.interfaces_to_create_per_device[ids["name"]] = []
+
+        return model
+
+    # TODO delete() method
 
 
 class Interface(ServiceNowCRUDMixin, DiffSyncModel):
@@ -173,6 +233,25 @@ class Interface(ServiceNowCRUDMixin, DiffSyncModel):
     sys_id: Optional[str] = None
     pk: Optional[uuid.UUID] = None
 
+    @classmethod
+    def create(cls, diffsync, ids, attrs):
+        """Create an interface in isolation, or if the parent Device is new as well, defer for later bulk-creation."""
+        if ids["device_name"] in diffsync.interfaces_to_create_per_device:
+            diffsync.job.log_debug(
+                f'Device "{ids["device_name"]}" was just created; deferring creation of interface "{ids["name"]}"'
+            )
+            # copy-paste of DiffSyncModel's create() classmethod;
+            # we don't want to call super().create() here as that would be ServiceNowCRUDMixin.create(),
+            # which is what we're trying to avoid here!
+            model = cls(**ids, diffsync=diffsync, **attrs)
+            model.set_status(DiffSyncStatus.SUCCESS, "Deferred creation in ServiceNow")
+            diffsync.interfaces_to_create_per_device[ids["device_name"]].append(model)
+        else:
+            model = super().create(diffsync, ids=ids, attrs=attrs)
+        return model
+
+    # TODO delete() method
+
 
 class IPAddress(ServiceNowCRUDMixin, DiffSyncModel):
     """An IPv4 or IPv6 address."""
@@ -193,6 +272,8 @@ class IPAddress(ServiceNowCRUDMixin, DiffSyncModel):
     pk: Optional[uuid.UUID] = None
 
 
-Location.update_forward_refs()
+Company.update_forward_refs()
 Device.update_forward_refs()
 Interface.update_forward_refs()
+Location.update_forward_refs()
+ProductModel.update_forward_refs()

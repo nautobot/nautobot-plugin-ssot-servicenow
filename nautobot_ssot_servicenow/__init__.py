@@ -1,11 +1,21 @@
 """Plugin declaration for nautobot_ssot_servicenow."""
 
-__version__ = "0.1.0"
+try:
+    from importlib import metadata
+except ImportError:
+    # Running on pre-3.8 Python; use importlib-metadata package
+    import importlib_metadata as metadata
 
+__version__ = metadata.version(__name__)
+
+
+from nautobot.core.signals import nautobot_database_ready
 from nautobot.extras.plugins import PluginConfig
 
+from .signals import nautobot_database_ready_callback
 
-class NautobotSSOTServicenowConfig(PluginConfig):
+
+class NautobotSSOTServiceNowConfig(PluginConfig):
     """Plugin configuration for the nautobot_ssot_servicenow plugin."""
 
     name = "nautobot_ssot_servicenow"
@@ -15,10 +25,19 @@ class NautobotSSOTServicenowConfig(PluginConfig):
     description = "Nautobot SSoT ServiceNow."
     base_url = "ssot-servicenow"
     required_settings = []
-    min_version = "1.0.0"
+    min_version = "1.2.0"
     max_version = "1.9999"
     default_settings = {}
+    required_settings = []
     caching_config = {}
 
+    home_view_name = "plugins:nautobot_ssot:dashboard"  # a link to the ServiceNow job would be even better
+    config_view_name = "plugins:nautobot_ssot_servicenow:config"
 
-config = NautobotSSOTServicenowConfig  # pylint:disable=invalid-name
+    def ready(self):
+        """Callback when this plugin is loaded."""
+        super().ready()
+        nautobot_database_ready.connect(nautobot_database_ready_callback, sender=self)
+
+
+config = NautobotSSOTServiceNowConfig  # pylint:disable=invalid-name

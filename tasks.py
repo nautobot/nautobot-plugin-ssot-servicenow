@@ -12,9 +12,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
+import sys
+import time
+
 from distutils.util import strtobool
 from invoke import Collection, task as invoke_task
-import os
 
 
 def is_truthy(arg):
@@ -33,12 +36,12 @@ def is_truthy(arg):
 
 
 # Use pyinvoke configuration for default values, see http://docs.pyinvoke.org/en/stable/concepts/configuration.html
-# Variables may be overwritten in invoke.yml or by the environment variables INVOKE_NAUTOBOT-DATA-SYNC-SERVICENOW_xxx
+# Variables may be overwritten in invoke.yml or by the environment variables INVOKE_NAUTOBOT_SSOT_SERVICENOW_xxx
 namespace = Collection("nautobot_ssot_servicenow")
 namespace.configure(
     {
         "nautobot_ssot_servicenow": {
-            "nautobot_ver": "develop-latest",
+            "nautobot_ver": "1.2.1",
             "project_name": "nautobot-ssot-servicenow",
             "python_ver": "3.6",
             "local": False,
@@ -81,7 +84,10 @@ def docker_compose(context, command, **kwargs):
         command (str): Command string to append to the "docker-compose ..." command, such as "build", "up", etc.
         **kwargs: Passed through to the context.run() call.
     """
-    build_env = {"NAUTOBOT_VER": context.nautobot_ssot_servicenow.nautobot_ver, "PYTHON_VER": context.nautobot_ssot_servicenow.python_ver}
+    build_env = {
+        "NAUTOBOT_VER": context.nautobot_ssot_servicenow.nautobot_ver,
+        "PYTHON_VER": context.nautobot_ssot_servicenow.python_ver,
+    }
     compose_command = f'docker-compose --project-name {context.nautobot_ssot_servicenow.project_name} --project-directory "{context.nautobot_ssot_servicenow.compose_dir}"'
     for compose_file in context.nautobot_ssot_servicenow.compose_files:
         compose_file_path = os.path.join(context.nautobot_ssot_servicenow.compose_dir, compose_file)
@@ -193,9 +199,35 @@ def nbshell(context):
 
 
 @task
-def cli(context):
-    """Launch a bash shell inside the running Nautobot container."""
-    run_command(context, "bash")
+def cli(context, service="nautobot"):
+    """Launch a bash shell inside a running container."""
+    docker_compose(context, f"exec {service} bash", pty=True)
+
+
+@task
+def sql_import(context, filename="nautobot_backup.dump"):
+    """Import database data from an SQL dump.
+
+    Args:
+        context(obj): Used to run specific commands
+        filename (str): File to import from
+    """
+    if not os.path.isfile(filename):
+        sys.exit(f"No {filename} file found!")
+
+    docker_compose(context, "up -d postgres")
+    time.sleep(2)  # Wait for the database to be ready
+
+    print(f"Importing data from {filename}...")
+    context.run(
+        f"docker cp '{filename}' '{context.nautobot_ssot_servicenow.project_name}_postgres_1':/tmp/",
+        pty=True,
+    )
+    docker_compose(
+        context,
+        f'exec postgres sh -c "psql -U nautobot < /tmp/{filename}"',
+        pty=True,
+    )
 
 
 @task(
@@ -309,6 +341,13 @@ def bandit(context):
 
 
 @task
+def yamllint(context):
+    """Run yamllint to validate formatting adheres to NTC defined YAML standards."""
+    command = "yamllint . --format standard"
+    run_command(context, command)
+
+
+@task
 def check_migrations(context):
     """Check for missing migrations."""
     command = "nautobot-server --config=nautobot/core/tests/nautobot_config.py makemigrations --dry-run --check"
@@ -365,6 +404,8 @@ def tests(context, failfast=False):
     bandit(context)
     print("Running pydocstyle...")
     pydocstyle(context)
+    print("Running yamllint...")
+    yamllint(context)
     print("Running pylint...")
     pylint(context)
     print("Running unit tests...")

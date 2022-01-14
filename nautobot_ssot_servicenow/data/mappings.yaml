@@ -1,6 +1,32 @@
 ---
-- table: "cmn_location"
-  modelname: "location"
+company:
+  table: "core_company"
+  # Only load companies that are flagged as manufacturer: true, as those correspond to Nautobot Manufacturer records
+  table_query:
+    manufacturer: true
+  mappings:
+    - field: "name"
+      column: "name"
+    - field: "manufacturer"
+      column: "manufacturer"
+product_model:
+  table: "cmdb_hardware_product_model"
+  parent:
+    modelname: "company"
+    field: "manufacturer_name"
+    column: "manufacturer"
+  mappings:
+    - field: "manufacturer_name"
+      reference:
+        key: "manufacturer"
+        table: "core_company"
+        column: "name"
+    - field: "model_name"
+      column: "name"
+    - field: "model_number"
+      column: "model_number"
+location:
+  table: "cmn_location"
   mappings:
     - field: "name"
       column: "name"
@@ -9,8 +35,14 @@
         key: "parent"
         table: "cmn_location"
         column: "name"
-- table: "cmdb_ci_ip_switch"
-  modelname: "device"
+    - field: "full_name"
+      column: "full_name"
+    - field: "latitude"
+      column: "latitude"
+    - field: "longitude"
+      column: "longitude"
+device:
+  table: "cmdb_ci_ip_switch"
   parent:
     modelname: "location"
     field: "location_name"
@@ -23,28 +55,22 @@
         key: "location"
         table: "cmn_location"
         column: "name"
-    - field: "model"
-      reference:
-        key: "model_id"
-        table: "cmdb_model"
-        column: "name"
-    - field: "platform"
-      reference:
-        key: "{{ app_prefix }}platform"
-        table: "{{ app_prefix }}platform"
-        column: "name"
-    - field: "role"
-      reference:
-        key: "{{ app_prefix }}device_role"
-        table: "{{ app_prefix }}device_role"
-        column: "name"
-    - field: "vendor"
+    - field: "asset_tag"
+      column: "asset_tag"
+    - field: "manufacturer_name"
       reference:
         key: "manufacturer"
         table: "core_company"
         column: "name"
-- table: "cmdb_ci_network_adapter"
-  modelname: "interface"
+    - field: "model_name"
+      reference:
+        key: "model_id"
+        table: "cmdb_hardware_product_model"
+        column: "name"
+    - field: "serial"
+      column: "serial_number"
+interface:
+  table: "cmdb_ci_network_adapter"
   parent:
     modelname: "device"
     field: "device_name"

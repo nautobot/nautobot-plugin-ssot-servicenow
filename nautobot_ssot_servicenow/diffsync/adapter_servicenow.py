@@ -5,7 +5,7 @@ import os
 
 from diffsync import DiffSync
 from diffsync.enum import DiffSyncFlags
-from diffsync.exceptions import ObjectAlreadyExists
+from diffsync.exceptions import ObjectAlreadyExists, ObjectNotFound
 from jinja2 import Environment, FileSystemLoader
 import yaml
 
@@ -76,14 +76,16 @@ class ServiceNowDiffSync(DiffSync):
                 # we link them together instead of creating new, redundant ancestor records in ServiceNow.
                 ancestor = self.site_filter.region
                 while ancestor is not None:
-                    if not self.get(self.location, ancestor.name):
+                    try:
+                        self.get(self.location, ancestor.name)
+                    except ObjectNotFound:
                         record = (
                             self.client.resource(api_path=f"/table/{entry['table']}")
                             .get(query={"name": ancestor.name})
                             .one_or_none()
                         )
                         if record:
-                            location = self.load_record(entry["table"], record, self.location, entry["mappings"])
+                            self.load_record(entry["table"], record, self.location, entry["mappings"])
                     ancestor = ancestor.parent
 
                 self.job.log_info(

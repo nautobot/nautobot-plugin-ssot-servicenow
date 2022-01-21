@@ -18,8 +18,8 @@ class ServiceNowDataTargetJobTestCase(TestCase):
 
     def test_metadata(self):
         """Verify correctness of the Job Meta attributes."""
-        self.assertEqual("ServiceNow", ServiceNowDataTarget.name)
-        self.assertEqual("ServiceNow", ServiceNowDataTarget.Meta.name)
+        self.assertEqual("Nautobot ⟹ ServiceNow", ServiceNowDataTarget.name)
+        self.assertEqual("Nautobot ⟹ ServiceNow", ServiceNowDataTarget.Meta.name)
         self.assertEqual("ServiceNow", ServiceNowDataTarget.Meta.data_target)
         self.assertEqual("Synchronize data from Nautobot into ServiceNow.", ServiceNowDataTarget.description)
         self.assertEqual("Synchronize data from Nautobot into ServiceNow.", ServiceNowDataTarget.Meta.description)

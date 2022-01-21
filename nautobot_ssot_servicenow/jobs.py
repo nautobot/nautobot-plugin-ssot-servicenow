@@ -16,6 +16,9 @@ from .servicenow import ServiceNowClient
 from .utils import get_servicenow_parameters
 
 
+name = "SSoT - ServiceNow"  # pylint: disable=invalid-name
+
+
 class ServiceNowDataTarget(DataTarget, Job):
     """Job syncing data from Nautobot to ServiceNow."""
 
@@ -42,7 +45,7 @@ class ServiceNowDataTarget(DataTarget, Job):
     class Meta:
         """Metadata about this Job."""
 
-        name = "ServiceNow"
+        name = "Nautobot ⟹ ServiceNow"
         data_target = "ServiceNow"
         data_target_icon = static("nautobot_ssot_servicenow/ServiceNow_logo.svg")
         description = "Synchronize data from Nautobot into ServiceNow."

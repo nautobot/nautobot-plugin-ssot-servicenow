@@ -16,7 +16,7 @@ from .servicenow import ServiceNowClient
 from .utils import get_servicenow_parameters
 
 
-name = "SSoT - ServiceNow"
+name = "SSoT - ServiceNow"  # pylint: disable=invalid-name
 
 
 class ServiceNowDataTarget(DataTarget, Job):

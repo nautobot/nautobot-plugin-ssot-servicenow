@@ -74,5 +74,5 @@ PLUGINS_CONFIG = {
         "instance": os.getenv("SERVICENOW_INSTANCE", ""),
         "username": os.getenv("SERVICENOW_USERNAME", ""),
         "password": os.getenv("SERVICENOW_PASSWORD", ""),
-    }
+    },
 }

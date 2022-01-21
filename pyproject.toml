@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nautobot-ssot-servicenow"
-version = "0.9.0"
+version = "0.9.1"
 description = "Nautobot SSoT ServiceNow"
 authors = ["Network to Code, LLC <opensource@networktocode.com>"]
 

@@ -5,7 +5,7 @@ on: # yamllint disable-line rule:truthy rule:comments
   - "pull_request"
 
 env:
-  PLUGIN_NAME: "nautobot-plugin-ssot-servicenow"
+  PLUGIN_NAME: "nautobot-ssot-servicenow"
 
 jobs:
   black:

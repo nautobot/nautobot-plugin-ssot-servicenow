@@ -3,20 +3,26 @@
 from unittest import mock
 import uuid
 
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.test import TestCase
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Region, Site
 from nautobot.extras.models import Job, JobResult, Status
+from nautobot.utilities.testing import TransactionTestCase
 
 from nautobot_ssot_servicenow.jobs import ServiceNowDataTarget
 from nautobot_ssot_servicenow.diffsync.adapter_nautobot import NautobotDiffSync
 
 
-class NautobotDiffSyncTestCase(TestCase):
+if "job_logs" in settings.DATABASES:
+    settings.DATABASES["job_logs"] = settings.DATABASES["job_logs"].copy()
+    settings.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
+
+
+class NautobotDiffSyncTestCase(TransactionTestCase):
     """Test the NautobotDiffSync adapter class."""
 
-    databases = "__all__"
+    databases = ("default", "job_logs")
 
     def setUp(self):
         """Per-test-case data setup."""

@@ -6,7 +6,7 @@ from nautobot_ssot_servicenow.third_party.pysnow import Client
 
 # from pysnow.exceptions import MultipleResults
 from nautobot_ssot_servicenow.third_party.pysnow.exceptions import MultipleResults
-import requests
+import requests  # pylint: disable=wrong-import-order
 
 
 logger = logging.getLogger(__name__)

@@ -1,8 +1,11 @@
 """Interactions with ServiceNow APIs."""
 import logging
 
-from pysnow import Client
-from pysnow.exceptions import MultipleResults
+# from pysnow import Client
+from nautobot_ssot_servicenow.third_party.pysnow import Client
+
+# from pysnow.exceptions import MultipleResults
+from nautobot_ssot_servicenow.third_party.pysnow.exceptions import MultipleResults
 import requests
 
 

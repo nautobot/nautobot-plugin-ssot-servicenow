@@ -4,7 +4,9 @@ import uuid
 
 from diffsync import DiffSyncModel
 from diffsync.enum import DiffSyncStatus
-import pysnow
+
+# import pysnow
+from nautobot_ssot_servicenow.third_party import pysnow
 
 
 class ServiceNowCRUDMixin:

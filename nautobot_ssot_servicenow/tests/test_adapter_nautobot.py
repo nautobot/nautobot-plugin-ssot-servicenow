@@ -15,6 +15,7 @@ from nautobot_ssot_servicenow.diffsync.adapter_nautobot import NautobotDiffSync
 
 class NautobotDiffSyncTestCase(TestCase):
     """Test the NautobotDiffSync adapter class."""
+
     databases = "__all__"
 
     def setUp(self):

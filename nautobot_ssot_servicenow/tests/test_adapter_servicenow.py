@@ -14,6 +14,7 @@ from nautobot_ssot_servicenow.diffsync.adapter_servicenow import ServiceNowDiffS
 
 class MockServiceNowClient:
     """Mock version of the ServiceNowClient class using canned data."""
+
     databases = "__all__"
 
     def get_by_sys_id(self, table, sys_id):  # pylint: disable=unused-argument,no-self-use

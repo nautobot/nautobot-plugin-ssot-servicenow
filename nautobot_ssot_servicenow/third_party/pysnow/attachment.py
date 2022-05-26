@@ -14,7 +14,7 @@ except ImportError:  # pragma: no cover
         "Try installing the python-magic-bin package if running on Mac or Windows"
     )
 
-from pysnow.exceptions import InvalidUsage
+from .exceptions import InvalidUsage
 
 
 class Attachment(object):

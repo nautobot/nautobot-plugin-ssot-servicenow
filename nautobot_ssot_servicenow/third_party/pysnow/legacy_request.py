@@ -7,7 +7,7 @@ import six
 import ntpath
 import warnings
 
-from pysnow.query_builder import QueryBuilder
+from .query_builder import QueryBuilder
 
 from .legacy_exceptions import (
     NoRequestExecuted,

@@ -39,7 +39,7 @@ class ServiceNowDataTarget(DataTarget, Job):
         description="Only sync records belonging to a single Site.",
         model=Site,
         default=None,
-        required=True,
+        required=False,
     )
 
     class Meta:

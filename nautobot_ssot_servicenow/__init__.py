@@ -25,7 +25,7 @@ class NautobotSSOTServiceNowConfig(PluginConfig):
     description = "Nautobot SSoT ServiceNow."
     base_url = "ssot-servicenow"
     required_settings = []
-    min_version = "1.2.0"
+    min_version = "1.4.0"
     max_version = "1.9999"
     default_settings = {}
     required_settings = []

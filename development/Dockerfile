@@ -31,6 +31,7 @@ RUN curl -sSL https://install.python-poetry.org -o /tmp/install-poetry.py && \
     rm -f /tmp/install-poetry.py && \
     poetry config virtualenvs.create false
 
+RUN poetry --version
 # !!! USE CAUTION WHEN MODIFYING LINES ABOVE
 # -------------------------------------------------------------------------------------
 # App-specifc system build/test dependencies.

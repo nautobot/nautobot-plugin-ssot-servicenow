@@ -43,7 +43,7 @@ namespace.configure(
         "nautobot_ssot_servicenow": {
             "nautobot_ver": "1.4.0",
             "project_name": "nautobot-ssot-servicenow",
-            "python_ver": "3.8",
+            "python_ver": "3.7",
             "local": False,
             "compose_dir": os.path.join(os.path.dirname(__file__), "development"),
             "compose_files": [

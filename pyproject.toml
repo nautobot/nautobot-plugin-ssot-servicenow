@@ -92,6 +92,7 @@ disable = """,
     bad-continuation,
     too-few-public-methods,
     duplicate-code,
+    use-list-literal,
     """
 
 [tool.pylint.miscellaneous]

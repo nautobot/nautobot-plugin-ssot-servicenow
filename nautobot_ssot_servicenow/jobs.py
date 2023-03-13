@@ -19,7 +19,7 @@ from .utils import get_servicenow_parameters
 name = "SSoT - ServiceNow"  # pylint: disable=invalid-name
 
 
-class ServiceNowDataTarget(DataTarget, Job):
+class ServiceNowDataTarget(DataTarget, Job):  # pylint: disable=abstract-method
     """Job syncing data from Nautobot to ServiceNow."""
 
     debug = BooleanVar(description="Enable for more verbose logging.")

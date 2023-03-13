@@ -1,4 +1,8 @@
 """Plugin declaration for nautobot_ssot_servicenow."""
+from nautobot.core.signals import nautobot_database_ready
+from nautobot.extras.plugins import PluginConfig
+
+from .signals import nautobot_database_ready_callback
 
 try:
     from importlib import metadata
@@ -7,12 +11,6 @@ except ImportError:
     import importlib_metadata as metadata
 
 __version__ = metadata.version(__name__)
-
-
-from nautobot.core.signals import nautobot_database_ready
-from nautobot.extras.plugins import PluginConfig
-
-from .signals import nautobot_database_ready_callback
 
 
 class NautobotSSOTServiceNowConfig(PluginConfig):
@@ -25,7 +23,7 @@ class NautobotSSOTServiceNowConfig(PluginConfig):
     description = "Nautobot SSoT ServiceNow."
     base_url = "ssot-servicenow"
     required_settings = []
-    min_version = "1.2.0"
+    min_version = "1.4.0"
     max_version = "1.9999"
     default_settings = {}
     required_settings = []

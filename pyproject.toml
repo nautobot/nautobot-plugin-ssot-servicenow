@@ -20,7 +20,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.7"
-nautobot = "^1.2.0"
+nautobot = "^1.4.0"
 nautobot-ssot = "^1.0.1"
 Jinja2 = ">=2.11.3"
 PyYAML = ">=5.4"
@@ -92,6 +92,7 @@ disable = """,
     bad-continuation,
     too-few-public-methods,
     duplicate-code,
+    use-list-literal,
     """
 
 [tool.pylint.miscellaneous]

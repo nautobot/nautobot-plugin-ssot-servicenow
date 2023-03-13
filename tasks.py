@@ -41,7 +41,7 @@ namespace = Collection("nautobot_ssot_servicenow")
 namespace.configure(
     {
         "nautobot_ssot_servicenow": {
-            "nautobot_ver": "1.3.4",
+            "nautobot_ver": "1.4.0",
             "project_name": "nautobot-ssot-servicenow",
             "python_ver": "3.7",
             "local": False,
@@ -307,7 +307,7 @@ def black(context, autoformat=False):
 @task
 def flake8(context):
     """Check for PEP8 compliance and other style issues."""
-    command = "flake8 ."
+    command = "flake8 . --config=.flake8"
     run_command(context, command)
 
 
